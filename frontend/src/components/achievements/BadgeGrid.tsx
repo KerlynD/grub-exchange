@@ -77,11 +77,9 @@ export default function BadgeGrid() {
               </p>
             )}
             {!isEarned && (
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="w-6 h-6 rounded-full bg-card-hover/80 flex items-center justify-center">
-                  <span className="text-text-secondary text-xs">?</span>
-                </div>
-              </div>
+              <p className="text-text-secondary text-[10px] mt-1.5 font-medium">
+                Locked
+              </p>
             )}
           </motion.div>
         );
