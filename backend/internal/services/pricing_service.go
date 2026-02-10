@@ -10,6 +10,8 @@ const (
 	MaxPrice         = 10000.0
 )
 
+// CalculateNewPrice returns the new market price after a trade.
+// Used by market maker for price nudges (no execution price needed).
 func CalculateNewPrice(currentPrice, netShares, totalShares float64) float64 {
 	if totalShares == 0 {
 		return currentPrice
@@ -22,6 +24,30 @@ func CalculateNewPrice(currentPrice, netShares, totalShares float64) float64 {
 	newPrice = math.Round(newPrice*100) / 100
 
 	return newPrice
+}
+
+// CalculateTradeExecution returns the new market price AND the execution price.
+// The execution price is the average of pre-impact and post-impact price.
+// This prevents buy-sell arbitrage: a buy→sell cycle always results in a net loss
+// because you buy at the midpoint going up and sell at the midpoint going down.
+//
+// Math proof: buy at avg(P, P+d) then sell at avg(P+d, P+d-d') → net = -P*d²/2 < 0
+func CalculateTradeExecution(currentPrice, netShares, totalShares float64) (newMarketPrice, executionPrice float64) {
+	if totalShares == 0 {
+		return currentPrice, currentPrice
+	}
+
+	priceChange := (netShares / totalShares) * VolatilityFactor
+	newMarketPrice = currentPrice * (1 + priceChange)
+	newMarketPrice = math.Max(MinPrice, math.Min(MaxPrice, newMarketPrice))
+	newMarketPrice = math.Round(newMarketPrice*100) / 100
+
+	// Execution price = average of pre-impact and post-impact price
+	// This simulates slippage like a real AMM / order book
+	executionPrice = (currentPrice + newMarketPrice) / 2
+	executionPrice = math.Round(executionPrice*100) / 100
+
+	return newMarketPrice, executionPrice
 }
 
 func ApplyDecay(currentPrice float64) float64 {
