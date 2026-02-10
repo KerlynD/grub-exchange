@@ -36,7 +36,7 @@ node_modules
 frontend/.next
 frontend/node_modules
 
-# SQLite database
+# Database files (legacy SQLite)
 *.db
 *.db-journal
 *.db-wal

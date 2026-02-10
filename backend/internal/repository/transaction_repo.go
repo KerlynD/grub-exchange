@@ -17,7 +17,7 @@ func NewTransactionRepo(db *sql.DB) *TransactionRepo {
 func (r *TransactionRepo) Create(tx *sql.Tx, t *models.Transaction) error {
 	_, err := tx.Exec(
 		`INSERT INTO transactions (buyer_id, stock_user_id, transaction_type, num_shares, price_per_share, total_grub, timestamp)
-		 VALUES (?, ?, ?, ?, ?, ?, ?)`,
+		 VALUES ($1, $2, $3, $4, $5, $6, $7)`,
 		t.BuyerID, t.StockUserID, t.TransactionType, t.NumShares, t.PricePerShare, t.TotalGrub, time.Now(),
 	)
 	return err
@@ -26,7 +26,7 @@ func (r *TransactionRepo) Create(tx *sql.Tx, t *models.Transaction) error {
 func (r *TransactionRepo) CreateNoTx(t *models.Transaction) error {
 	_, err := r.db.Exec(
 		`INSERT INTO transactions (buyer_id, stock_user_id, transaction_type, num_shares, price_per_share, total_grub, timestamp)
-		 VALUES (?, ?, ?, ?, ?, ?, ?)`,
+		 VALUES ($1, $2, $3, $4, $5, $6, $7)`,
 		t.BuyerID, t.StockUserID, t.TransactionType, t.NumShares, t.PricePerShare, t.TotalGrub, time.Now(),
 	)
 	return err
@@ -38,8 +38,8 @@ func (r *TransactionRepo) GetByUser(userID int, limit int) ([]models.Transaction
 		 FROM transactions t
 		 JOIN users u1 ON t.buyer_id = u1.id
 		 JOIN users u2 ON t.stock_user_id = u2.id
-		 WHERE t.buyer_id = ?
-		 ORDER BY t.timestamp DESC LIMIT ?`,
+		 WHERE t.buyer_id = $1
+		 ORDER BY t.timestamp DESC LIMIT $2`,
 		userID, limit,
 	)
 	if err != nil {
@@ -65,8 +65,8 @@ func (r *TransactionRepo) GetByStock(stockUserID int, limit int) ([]models.Trans
 		 FROM transactions t
 		 JOIN users u1 ON t.buyer_id = u1.id
 		 JOIN users u2 ON t.stock_user_id = u2.id
-		 WHERE t.stock_user_id = ?
-		 ORDER BY t.timestamp DESC LIMIT ?`,
+		 WHERE t.stock_user_id = $1
+		 ORDER BY t.timestamp DESC LIMIT $2`,
 		stockUserID, limit,
 	)
 	if err != nil {
@@ -92,7 +92,7 @@ func (r *TransactionRepo) GetRecent(limit int) ([]models.TransactionWithDetails,
 		 FROM transactions t
 		 JOIN users u1 ON t.buyer_id = u1.id
 		 JOIN users u2 ON t.stock_user_id = u2.id
-		 ORDER BY t.timestamp DESC LIMIT ?`,
+		 ORDER BY t.timestamp DESC LIMIT $1`,
 		limit,
 	)
 	if err != nil {
@@ -116,7 +116,7 @@ func (r *TransactionRepo) GetVolume24h(stockUserID int) (float64, error) {
 	var volume sql.NullFloat64
 	err := r.db.QueryRow(
 		`SELECT SUM(num_shares) FROM transactions
-		 WHERE stock_user_id = ? AND timestamp > ?`,
+		 WHERE stock_user_id = $1 AND timestamp > $2`,
 		stockUserID, time.Now().Add(-24*time.Hour),
 	).Scan(&volume)
 	if err != nil {
@@ -130,7 +130,7 @@ func (r *TransactionRepo) GetVolume24h(stockUserID int) (float64, error) {
 
 func (r *TransactionRepo) RecordPriceHistory(tx *sql.Tx, userID int, price float64) error {
 	_, err := tx.Exec(
-		`INSERT INTO price_history (user_id, price, timestamp) VALUES (?, ?, ?)`,
+		`INSERT INTO price_history (user_id, price, timestamp) VALUES ($1, $2, $3)`,
 		userID, price, time.Now(),
 	)
 	return err
@@ -138,7 +138,7 @@ func (r *TransactionRepo) RecordPriceHistory(tx *sql.Tx, userID int, price float
 
 func (r *TransactionRepo) RecordPriceHistoryNoTx(userID int, price float64) error {
 	_, err := r.db.Exec(
-		`INSERT INTO price_history (user_id, price, timestamp) VALUES (?, ?, ?)`,
+		`INSERT INTO price_history (user_id, price, timestamp) VALUES ($1, $2, $3)`,
 		userID, price, time.Now(),
 	)
 	return err
@@ -147,7 +147,7 @@ func (r *TransactionRepo) RecordPriceHistoryNoTx(userID int, price float64) erro
 func (r *TransactionRepo) GetPriceHistory(userID int, since time.Time) ([]models.PriceHistory, error) {
 	rows, err := r.db.Query(
 		`SELECT id, user_id, price, timestamp FROM price_history
-		 WHERE user_id = ? AND timestamp > ?
+		 WHERE user_id = $1 AND timestamp > $2
 		 ORDER BY timestamp ASC`,
 		userID, since,
 	)
@@ -169,7 +169,7 @@ func (r *TransactionRepo) GetPriceHistory(userID int, since time.Time) ([]models
 
 func (r *TransactionRepo) GetAllTimePriceRange(userID int) (high float64, low float64, err error) {
 	err = r.db.QueryRow(
-		`SELECT COALESCE(MAX(price), 10.0), COALESCE(MIN(price), 10.0) FROM price_history WHERE user_id = ?`,
+		`SELECT COALESCE(MAX(price), 10.0), COALESCE(MIN(price), 10.0) FROM price_history WHERE user_id = $1`,
 		userID,
 	).Scan(&high, &low)
 	return
@@ -178,7 +178,7 @@ func (r *TransactionRepo) GetAllTimePriceRange(userID int) (high float64, low fl
 func (r *TransactionRepo) GetPriceAt(userID int, at time.Time) (float64, error) {
 	var price float64
 	err := r.db.QueryRow(
-		`SELECT price FROM price_history WHERE user_id = ? AND timestamp <= ? ORDER BY timestamp DESC LIMIT 1`,
+		`SELECT price FROM price_history WHERE user_id = $1 AND timestamp <= $2 ORDER BY timestamp DESC LIMIT 1`,
 		userID, at,
 	).Scan(&price)
 	if err == sql.ErrNoRows {

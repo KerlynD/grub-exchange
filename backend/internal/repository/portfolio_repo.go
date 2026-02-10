@@ -16,7 +16,7 @@ func NewPortfolioRepo(db *sql.DB) *PortfolioRepo {
 func (r *PortfolioRepo) GetByOwner(ownerID int) ([]models.Portfolio, error) {
 	rows, err := r.db.Query(
 		`SELECT id, owner_id, stock_user_id, num_shares, avg_purchase_price
-		 FROM portfolios WHERE owner_id = ?`, ownerID,
+		 FROM portfolios WHERE owner_id = $1`, ownerID,
 	)
 	if err != nil {
 		return nil, err
@@ -38,7 +38,7 @@ func (r *PortfolioRepo) GetHolding(ownerID, stockUserID int) (*models.Portfolio,
 	p := &models.Portfolio{}
 	err := r.db.QueryRow(
 		`SELECT id, owner_id, stock_user_id, num_shares, avg_purchase_price
-		 FROM portfolios WHERE owner_id = ? AND stock_user_id = ?`,
+		 FROM portfolios WHERE owner_id = $1 AND stock_user_id = $2`,
 		ownerID, stockUserID,
 	).Scan(&p.ID, &p.OwnerID, &p.StockUserID, &p.NumShares, &p.AvgPurchasePrice)
 	if err != nil {
@@ -50,18 +50,17 @@ func (r *PortfolioRepo) GetHolding(ownerID, stockUserID int) (*models.Portfolio,
 func (r *PortfolioRepo) UpsertHolding(tx *sql.Tx, ownerID, stockUserID int, numShares, avgPrice float64) error {
 	_, err := tx.Exec(
 		`INSERT INTO portfolios (owner_id, stock_user_id, num_shares, avg_purchase_price)
-		 VALUES (?, ?, ?, ?)
+		 VALUES ($1, $2, $3, $4)
 		 ON CONFLICT(owner_id, stock_user_id) DO UPDATE SET
-		 num_shares = ?, avg_purchase_price = ?`,
+		 num_shares = $3, avg_purchase_price = $4`,
 		ownerID, stockUserID, numShares, avgPrice,
-		numShares, avgPrice,
 	)
 	return err
 }
 
 func (r *PortfolioRepo) ReduceShares(tx *sql.Tx, ownerID, stockUserID int, numShares float64) error {
 	_, err := tx.Exec(
-		`UPDATE portfolios SET num_shares = num_shares - ? WHERE owner_id = ? AND stock_user_id = ?`,
+		`UPDATE portfolios SET num_shares = num_shares - $1 WHERE owner_id = $2 AND stock_user_id = $3`,
 		numShares, ownerID, stockUserID,
 	)
 	return err
@@ -69,7 +68,7 @@ func (r *PortfolioRepo) ReduceShares(tx *sql.Tx, ownerID, stockUserID int, numSh
 
 func (r *PortfolioRepo) DeleteHolding(tx *sql.Tx, ownerID, stockUserID int) error {
 	_, err := tx.Exec(
-		`DELETE FROM portfolios WHERE owner_id = ? AND stock_user_id = ?`,
+		`DELETE FROM portfolios WHERE owner_id = $1 AND stock_user_id = $2`,
 		ownerID, stockUserID,
 	)
 	return err

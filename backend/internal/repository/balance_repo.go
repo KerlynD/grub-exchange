@@ -16,7 +16,7 @@ func NewBalanceRepo(db *sql.DB) *BalanceRepo {
 
 func (r *BalanceRepo) Create(userID int, initialBalance float64) error {
 	_, err := r.db.Exec(
-		`INSERT INTO balances (user_id, grub_balance) VALUES (?, ?)`,
+		`INSERT INTO balances (user_id, grub_balance) VALUES ($1, $2)`,
 		userID, initialBalance,
 	)
 	return err
@@ -25,7 +25,7 @@ func (r *BalanceRepo) Create(userID int, initialBalance float64) error {
 func (r *BalanceRepo) GetByUserID(userID int) (*models.Balance, error) {
 	balance := &models.Balance{}
 	err := r.db.QueryRow(
-		`SELECT user_id, grub_balance, last_daily_claim FROM balances WHERE user_id = ?`, userID,
+		`SELECT user_id, grub_balance, last_daily_claim FROM balances WHERE user_id = $1`, userID,
 	).Scan(&balance.UserID, &balance.GrubBalance, &balance.LastDailyClaim)
 	if err != nil {
 		return nil, err
@@ -35,7 +35,7 @@ func (r *BalanceRepo) GetByUserID(userID int) (*models.Balance, error) {
 
 func (r *BalanceRepo) UpdateBalance(tx *sql.Tx, userID int, amount float64) error {
 	_, err := tx.Exec(
-		`UPDATE balances SET grub_balance = grub_balance + ? WHERE user_id = ?`,
+		`UPDATE balances SET grub_balance = grub_balance + $1 WHERE user_id = $2`,
 		amount, userID,
 	)
 	return err
@@ -43,7 +43,7 @@ func (r *BalanceRepo) UpdateBalance(tx *sql.Tx, userID int, amount float64) erro
 
 func (r *BalanceRepo) UpdateBalanceNoTx(userID int, amount float64) error {
 	_, err := r.db.Exec(
-		`UPDATE balances SET grub_balance = grub_balance + ? WHERE user_id = ?`,
+		`UPDATE balances SET grub_balance = grub_balance + $1 WHERE user_id = $2`,
 		amount, userID,
 	)
 	return err
@@ -51,7 +51,7 @@ func (r *BalanceRepo) UpdateBalanceNoTx(userID int, amount float64) error {
 
 func (r *BalanceRepo) ClaimDailyBonus(userID int) error {
 	_, err := r.db.Exec(
-		`UPDATE balances SET grub_balance = grub_balance + 10, last_daily_claim = ? WHERE user_id = ?`,
+		`UPDATE balances SET grub_balance = grub_balance + 10, last_daily_claim = $1 WHERE user_id = $2`,
 		time.Now(), userID,
 	)
 	return err
@@ -77,7 +77,7 @@ func (r *BalanceRepo) GetAllBalances() ([]models.Balance, error) {
 
 func (r *BalanceRepo) GetTopByBalance(limit int) ([]models.Balance, error) {
 	rows, err := r.db.Query(
-		`SELECT user_id, grub_balance, last_daily_claim FROM balances ORDER BY grub_balance DESC LIMIT ?`, limit,
+		`SELECT user_id, grub_balance, last_daily_claim FROM balances ORDER BY grub_balance DESC LIMIT $1`, limit,
 	)
 	if err != nil {
 		return nil, err
