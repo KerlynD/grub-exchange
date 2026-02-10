@@ -65,9 +65,12 @@ func (h *AuthHandler) Logout(c *gin.Context) {
 }
 
 func (h *AuthHandler) GetMe(c *gin.Context) {
-	userID, _ := c.Get("userID")
+	userID, ok := getUserID(c)
+	if !ok {
+		return
+	}
 
-	user, err := h.authService.GetMe(userID.(int))
+	user, err := h.authService.GetMe(userID)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return

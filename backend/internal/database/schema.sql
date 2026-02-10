@@ -58,6 +58,36 @@ CREATE TABLE IF NOT EXISTS portfolio_snapshots (
     timestamp TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Notifications (activity feed)
+CREATE TABLE IF NOT EXISTS notifications (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(id),
+    type TEXT NOT NULL,
+    message TEXT NOT NULL,
+    actor_username TEXT NOT NULL DEFAULT '',
+    stock_ticker TEXT NOT NULL DEFAULT '',
+    num_shares DOUBLE PRECISION DEFAULT 0,
+    read BOOLEAN DEFAULT false,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Achievement definitions
+CREATE TABLE IF NOT EXISTS achievements (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    description TEXT NOT NULL,
+    icon TEXT NOT NULL
+);
+
+-- User achievements (which users earned which)
+CREATE TABLE IF NOT EXISTS user_achievements (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(id),
+    achievement_id TEXT NOT NULL REFERENCES achievements(id),
+    earned_at TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE(user_id, achievement_id)
+);
+
 -- Indexes for performance
 CREATE INDEX IF NOT EXISTS idx_portfolio_snapshots_user_time ON portfolio_snapshots(user_id, timestamp DESC);
 CREATE INDEX IF NOT EXISTS idx_portfolios_owner ON portfolios(owner_id);
@@ -67,3 +97,5 @@ CREATE INDEX IF NOT EXISTS idx_transactions_stock ON transactions(stock_user_id)
 CREATE INDEX IF NOT EXISTS idx_transactions_buyer ON transactions(buyer_id);
 CREATE INDEX IF NOT EXISTS idx_price_history_user_time ON price_history(user_id, timestamp DESC);
 CREATE INDEX IF NOT EXISTS idx_users_ticker ON users(ticker);
+CREATE INDEX IF NOT EXISTS idx_notifications_user_time ON notifications(user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_user_achievements_user ON user_achievements(user_id);

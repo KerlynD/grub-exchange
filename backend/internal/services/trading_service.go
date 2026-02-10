@@ -3,6 +3,7 @@ package services
 import (
 	"database/sql"
 	"errors"
+	"fmt"
 	"grub-exchange/internal/models"
 	"grub-exchange/internal/repository"
 	"math"
@@ -14,6 +15,8 @@ type TradingService struct {
 	balanceRepo   *repository.BalanceRepo
 	portfolioRepo *repository.PortfolioRepo
 	txnRepo       *repository.TransactionRepo
+	notifRepo     *repository.NotificationRepo
+	achieveSvc    *AchievementService
 }
 
 func NewTradingService(
@@ -22,6 +25,8 @@ func NewTradingService(
 	balanceRepo *repository.BalanceRepo,
 	portfolioRepo *repository.PortfolioRepo,
 	txnRepo *repository.TransactionRepo,
+	notifRepo *repository.NotificationRepo,
+	achieveSvc *AchievementService,
 ) *TradingService {
 	return &TradingService{
 		db:            db,
@@ -29,6 +34,8 @@ func NewTradingService(
 		balanceRepo:   balanceRepo,
 		portfolioRepo: portfolioRepo,
 		txnRepo:       txnRepo,
+		notifRepo:     notifRepo,
+		achieveSvc:    achieveSvc,
 	}
 }
 
@@ -81,7 +88,7 @@ func (s *TradingService) ExecuteBuy(buyerID int, stockTicker string, numShares f
 		return nil, errors.New("insufficient Grub balance")
 	}
 
-	// Read existing holding BEFORE starting transaction (SQLite single-conn deadlock prevention)
+	// Read existing holding BEFORE starting transaction
 	existing, err := s.portfolioRepo.GetHolding(buyerID, stockUser.ID)
 	if err != nil && err != sql.ErrNoRows {
 		return nil, err
@@ -145,6 +152,17 @@ func (s *TradingService) ExecuteBuy(buyerID int, stockTicker string, numShares f
 	buyerUsername := ""
 	if buyer != nil {
 		buyerUsername = buyer.Username
+	}
+
+	// Notify the stock owner that someone bought their stock
+	if s.notifRepo != nil && stockUser.ID != buyerID {
+		msg := fmt.Sprintf("%s just bought %.2f shares of you!", buyerUsername, finalShares)
+		_ = s.notifRepo.Create(stockUser.ID, "trade_buy", msg, buyerUsername, stockUser.Ticker, finalShares)
+	}
+
+	// Check achievements for the buyer
+	if s.achieveSvc != nil {
+		s.achieveSvc.CheckAfterTrade(buyerID)
 	}
 
 	return &models.TransactionWithDetails{
@@ -231,6 +249,17 @@ func (s *TradingService) ExecuteSell(sellerID int, stockTicker string, numShares
 	sellerUsername := ""
 	if seller != nil {
 		sellerUsername = seller.Username
+	}
+
+	// Notify the stock owner that someone sold their stock
+	if s.notifRepo != nil && stockUser.ID != sellerID {
+		msg := fmt.Sprintf("%s just sold %.2f shares of you", sellerUsername, finalShares)
+		_ = s.notifRepo.Create(stockUser.ID, "trade_sell", msg, sellerUsername, stockUser.Ticker, finalShares)
+	}
+
+	// Check achievements for the seller
+	if s.achieveSvc != nil {
+		s.achieveSvc.CheckAfterTrade(sellerID)
 	}
 
 	return &models.TransactionWithDetails{

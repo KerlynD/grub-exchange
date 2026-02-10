@@ -101,3 +101,32 @@ export interface PortfolioSnapshot {
   grub_balance: number;
   timestamp: string;
 }
+
+export interface Notification {
+  id: number;
+  user_id: number;
+  type: string;
+  message: string;
+  actor_username: string;
+  stock_ticker: string;
+  num_shares: number;
+  read: boolean;
+  created_at: string;
+}
+
+export interface Achievement {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+}
+
+export interface UserAchievement {
+  id: number;
+  user_id: number;
+  achievement_id: string;
+  name: string;
+  description: string;
+  icon: string;
+  earned_at: string;
+}

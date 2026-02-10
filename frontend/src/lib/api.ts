@@ -7,6 +7,9 @@ import {
   LeaderboardData,
   TradeRequest,
   PortfolioSnapshot,
+  Notification,
+  Achievement,
+  UserAchievement,
 } from "@/types";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
@@ -168,4 +171,24 @@ export async function getRecentTransactions(): Promise<{
   transactions: TransactionWithDetails[];
 }> {
   return fetchAPI("/api/transactions");
+}
+
+// Notifications
+export async function getNotifications(): Promise<{
+  notifications: Notification[];
+  unread_count: number;
+}> {
+  return fetchAPI("/api/notifications");
+}
+
+export async function markNotificationsRead(): Promise<void> {
+  await fetchAPI("/api/notifications/read", { method: "POST" });
+}
+
+// Achievements
+export async function getAchievements(): Promise<{
+  earned: UserAchievement[];
+  all: Achievement[];
+}> {
+  return fetchAPI("/api/achievements");
 }

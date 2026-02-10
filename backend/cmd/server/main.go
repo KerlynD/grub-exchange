@@ -23,13 +23,16 @@ func main() {
 	balanceRepo := repository.NewBalanceRepo(db)
 	portfolioRepo := repository.NewPortfolioRepo(db)
 	txnRepo := repository.NewTransactionRepo(db)
+	notifRepo := repository.NewNotificationRepo(db)
+	achieveRepo := repository.NewAchievementRepo(db)
 
 	// Initialize services
-	authService := services.NewAuthService(userRepo, balanceRepo, txnRepo)
-	tradingService := services.NewTradingService(db, userRepo, balanceRepo, portfolioRepo, txnRepo)
+	authService := services.NewAuthService(db, userRepo, balanceRepo, txnRepo)
+	achieveSvc := services.NewAchievementService(achieveRepo, balanceRepo, portfolioRepo, userRepo)
+	tradingService := services.NewTradingService(db, userRepo, balanceRepo, portfolioRepo, txnRepo, notifRepo, achieveSvc)
 	portfolioService := services.NewPortfolioService(userRepo, balanceRepo, portfolioRepo, txnRepo)
 	marketService := services.NewMarketService(userRepo, balanceRepo, portfolioRepo, txnRepo)
-	marketMaker := services.NewMarketMaker(userRepo, balanceRepo, portfolioRepo, txnRepo)
+	marketMaker := services.NewMarketMaker(db, userRepo, balanceRepo, portfolioRepo, txnRepo)
 
 	// Initialize handlers
 	authHandler := handlers.NewAuthHandler(authService)
@@ -37,13 +40,15 @@ func main() {
 	portfolioHandler := handlers.NewPortfolioHandler(portfolioService)
 	marketHandler := handlers.NewMarketHandler(marketService)
 	profileHandler := handlers.NewProfileHandler(authService, userRepo)
+	notifHandler := handlers.NewNotificationHandler(notifRepo)
+	achieveHandler := handlers.NewAchievementHandler(achieveSvc)
 
 	// Start background jobs
-	go runScheduledJobs(marketService)
+	go runScheduledJobs(marketService, achieveSvc, userRepo)
 	go marketMaker.Run(60 * time.Second) // nudge prices every 60 seconds
 
 	// Setup router
-	router := api.SetupRouter(authHandler, tradingHandler, portfolioHandler, marketHandler, profileHandler)
+	router := api.SetupRouter(authHandler, tradingHandler, portfolioHandler, marketHandler, profileHandler, notifHandler, achieveHandler)
 
 	port := os.Getenv("PORT")
 	if port == "" {
@@ -56,7 +61,7 @@ func main() {
 	}
 }
 
-func runScheduledJobs(marketService *services.MarketService) {
+func runScheduledJobs(marketService *services.MarketService, achieveSvc *services.AchievementService, userRepo *repository.UserRepo) {
 	// Daily decay runs every 24h
 	decayTicker := time.NewTicker(24 * time.Hour)
 	defer decayTicker.Stop()
@@ -64,6 +69,10 @@ func runScheduledJobs(marketService *services.MarketService) {
 	// Dividends run biweekly (every 14 days)
 	dividendTicker := time.NewTicker(14 * 24 * time.Hour)
 	defer dividendTicker.Stop()
+
+	// Achievement check runs every hour (for Diamond Hands, Whale, etc.)
+	achieveTicker := time.NewTicker(1 * time.Hour)
+	defer achieveTicker.Stop()
 
 	for {
 		select {
@@ -73,6 +82,22 @@ func runScheduledJobs(marketService *services.MarketService) {
 		case <-dividendTicker.C:
 			log.Println("Running biweekly dividends...")
 			marketService.RunDailyDividends()
+		case <-achieveTicker.C:
+			log.Println("Checking periodic achievements...")
+			checkPeriodicAchievements(achieveSvc, userRepo)
 		}
+	}
+}
+
+func checkPeriodicAchievements(achieveSvc *services.AchievementService, userRepo *repository.UserRepo) {
+	users, err := userRepo.GetAll()
+	if err != nil {
+		log.Printf("Error checking achievements: %v", err)
+		return
+	}
+	for _, u := range users {
+		achieveSvc.CheckDiamondHands(u.ID)
+		// Whale is also checked after trades, but check periodically too
+		achieveSvc.CheckAfterTrade(u.ID)
 	}
 }

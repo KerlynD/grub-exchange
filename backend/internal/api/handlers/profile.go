@@ -20,9 +20,12 @@ func NewProfileHandler(authService *services.AuthService, userRepo *repository.U
 }
 
 func (h *ProfileHandler) GetProfile(c *gin.Context) {
-	userID, _ := c.Get("userID")
+	userID, ok := getUserID(c)
+	if !ok {
+		return
+	}
 
-	user, err := h.authService.GetMe(userID.(int))
+	user, err := h.authService.GetMe(userID)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return
@@ -38,14 +41,17 @@ func (h *ProfileHandler) UpdateProfile(c *gin.Context) {
 		return
 	}
 
-	userID, _ := c.Get("userID")
+	userID, ok := getUserID(c)
+	if !ok {
+		return
+	}
 
-	if err := h.userRepo.UpdateBio(userID.(int), req.Bio); err != nil {
+	if err := h.userRepo.UpdateBio(userID, req.Bio); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to update profile"})
 		return
 	}
 
-	user, err := h.authService.GetMe(userID.(int))
+	user, err := h.authService.GetMe(userID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -55,10 +61,13 @@ func (h *ProfileHandler) UpdateProfile(c *gin.Context) {
 }
 
 func (h *ProfileHandler) GetPortfolioGraph(c *gin.Context) {
-	userID, _ := c.Get("userID")
+	userID, ok := getUserID(c)
+	if !ok {
+		return
+	}
 
 	since := time.Now().Add(-90 * 24 * time.Hour)
-	snapshots, err := h.userRepo.GetPortfolioSnapshots(userID.(int), since)
+	snapshots, err := h.userRepo.GetPortfolioSnapshots(userID, since)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

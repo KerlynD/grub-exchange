@@ -28,9 +28,12 @@ func (h *TradingHandler) Buy(c *gin.Context) {
 		return
 	}
 
-	userID, _ := c.Get("userID")
+	userID, ok := getUserID(c)
+	if !ok {
+		return
+	}
 
-	txn, err := h.tradingService.ExecuteBuy(userID.(int), req.StockTicker, req.NumShares, req.GrubAmount)
+	txn, err := h.tradingService.ExecuteBuy(userID, req.StockTicker, req.NumShares, req.GrubAmount)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -54,9 +57,12 @@ func (h *TradingHandler) Sell(c *gin.Context) {
 		return
 	}
 
-	userID, _ := c.Get("userID")
+	userID, ok := getUserID(c)
+	if !ok {
+		return
+	}
 
-	txn, err := h.tradingService.ExecuteSell(userID.(int), req.StockTicker, req.NumShares, req.GrubAmount)
+	txn, err := h.tradingService.ExecuteSell(userID, req.StockTicker, req.NumShares, req.GrubAmount)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return

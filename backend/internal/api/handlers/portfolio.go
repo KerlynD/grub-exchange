@@ -16,9 +16,12 @@ func NewPortfolioHandler(portfolioService *services.PortfolioService) *Portfolio
 }
 
 func (h *PortfolioHandler) GetPortfolio(c *gin.Context) {
-	userID, _ := c.Get("userID")
+	userID, ok := getUserID(c)
+	if !ok {
+		return
+	}
 
-	portfolio, err := h.portfolioService.GetUserPortfolio(userID.(int))
+	portfolio, err := h.portfolioService.GetUserPortfolio(userID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -28,9 +31,12 @@ func (h *PortfolioHandler) GetPortfolio(c *gin.Context) {
 }
 
 func (h *PortfolioHandler) ClaimDaily(c *gin.Context) {
-	userID, _ := c.Get("userID")
+	userID, ok := getUserID(c)
+	if !ok {
+		return
+	}
 
-	newBalance, err := h.portfolioService.ClaimDailyBonus(userID.(int))
+	newBalance, err := h.portfolioService.ClaimDailyBonus(userID)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -43,9 +49,12 @@ func (h *PortfolioHandler) ClaimDaily(c *gin.Context) {
 }
 
 func (h *PortfolioHandler) GetHistory(c *gin.Context) {
-	userID, _ := c.Get("userID")
+	userID, ok := getUserID(c)
+	if !ok {
+		return
+	}
 
-	history, err := h.portfolioService.GetTransactionHistory(userID.(int))
+	history, err := h.portfolioService.GetTransactionHistory(userID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

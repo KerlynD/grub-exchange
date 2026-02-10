@@ -13,6 +13,8 @@ func SetupRouter(
 	portfolioHandler *handlers.PortfolioHandler,
 	marketHandler *handlers.MarketHandler,
 	profileHandler *handlers.ProfileHandler,
+	notifHandler *handlers.NotificationHandler,
+	achieveHandler *handlers.AchievementHandler,
 ) *gin.Engine {
 	r := gin.Default()
 
@@ -53,6 +55,13 @@ func SetupRouter(
 			protected.GET("/stocks/:ticker", marketHandler.GetStockDetail)
 			protected.GET("/leaderboard", marketHandler.GetLeaderboard)
 			protected.GET("/transactions", marketHandler.GetRecentTransactions)
+
+			// Notifications
+			protected.GET("/notifications", notifHandler.GetNotifications)
+			protected.POST("/notifications/read", notifHandler.MarkRead)
+
+			// Achievements
+			protected.GET("/achievements", achieveHandler.GetMyAchievements)
 		}
 	}
 

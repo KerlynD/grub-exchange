@@ -1,21 +1,24 @@
 package services
 
 import (
+	"database/sql"
 	"errors"
 	"grub-exchange/internal/models"
 	"grub-exchange/internal/repository"
 	"grub-exchange/internal/utils"
 	"strings"
+	"time"
 )
 
 type AuthService struct {
+	db          *sql.DB
 	userRepo    *repository.UserRepo
 	balanceRepo *repository.BalanceRepo
 	txnRepo     *repository.TransactionRepo
 }
 
-func NewAuthService(userRepo *repository.UserRepo, balanceRepo *repository.BalanceRepo, txnRepo *repository.TransactionRepo) *AuthService {
-	return &AuthService{userRepo: userRepo, balanceRepo: balanceRepo, txnRepo: txnRepo}
+func NewAuthService(db *sql.DB, userRepo *repository.UserRepo, balanceRepo *repository.BalanceRepo, txnRepo *repository.TransactionRepo) *AuthService {
+	return &AuthService{db: db, userRepo: userRepo, balanceRepo: balanceRepo, txnRepo: txnRepo}
 }
 
 func (s *AuthService) Register(req *models.RegisterRequest) (*models.UserResponse, string, error) {
@@ -53,46 +56,57 @@ func (s *AuthService) Register(req *models.RegisterRequest) (*models.UserRespons
 		return nil, "", err
 	}
 
-	user := &models.User{
-		Username:          req.Username,
-		Email:             strings.ToLower(req.Email),
-		PasswordHash:      hashedPassword,
-		Ticker:            ticker,
-		CurrentSharePrice: 10.0,
-		SharesOutstanding: 1000,
+	// Atomic registration: create user, balance, and initial price history in one transaction
+	tx, err := s.db.Begin()
+	if err != nil {
+		return nil, "", err
 	}
+	defer tx.Rollback()
 
-	userID, err := s.userRepo.Create(user)
+	var userID int64
+	err = tx.QueryRow(
+		`INSERT INTO users (username, email, password_hash, ticker, bio, current_share_price, shares_outstanding, created_at)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`,
+		req.Username, strings.ToLower(req.Email), hashedPassword, ticker, "", 10.0, 1000, time.Now(),
+	).Scan(&userID)
 	if err != nil {
 		return nil, "", err
 	}
 
-	user.ID = int(userID)
-
-	if err := s.balanceRepo.Create(user.ID, 100.0); err != nil {
+	_, err = tx.Exec(
+		`INSERT INTO balances (user_id, grub_balance) VALUES ($1, $2)`,
+		userID, 100.0,
+	)
+	if err != nil {
 		return nil, "", err
 	}
 
-	// Record initial price in history
-	if err := s.txnRepo.RecordPriceHistoryNoTx(user.ID, 10.0); err != nil {
+	_, err = tx.Exec(
+		`INSERT INTO price_history (user_id, price, timestamp) VALUES ($1, $2, $3)`,
+		userID, 10.0, time.Now(),
+	)
+	if err != nil {
 		return nil, "", err
 	}
 
-	token, err := utils.GenerateToken(user.ID, user.Username)
+	if err := tx.Commit(); err != nil {
+		return nil, "", err
+	}
+
+	token, err := utils.GenerateToken(int(userID), req.Username)
 	if err != nil {
 		return nil, "", err
 	}
 
 	resp := &models.UserResponse{
-		ID:                user.ID,
-		Username:          user.Username,
-		Email:             user.Email,
-		Ticker:            user.Ticker,
-		Bio:               user.Bio,
-		CurrentSharePrice: user.CurrentSharePrice,
-		SharesOutstanding: user.SharesOutstanding,
+		ID:                int(userID),
+		Username:          req.Username,
+		Email:             strings.ToLower(req.Email),
+		Ticker:            ticker,
+		Bio:               "",
+		CurrentSharePrice: 10.0,
+		SharesOutstanding: 1000,
 		GrubBalance:       100.0,
-		CreatedAt:         user.CreatedAt,
 	}
 
 	return resp, token, nil

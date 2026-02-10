@@ -1,6 +1,7 @@
 package services
 
 import (
+	"database/sql"
 	"grub-exchange/internal/repository"
 	"log"
 	"math"
@@ -9,6 +10,7 @@ import (
 )
 
 type MarketMaker struct {
+	db            *sql.DB
 	userRepo      *repository.UserRepo
 	balanceRepo   *repository.BalanceRepo
 	portfolioRepo *repository.PortfolioRepo
@@ -17,12 +19,14 @@ type MarketMaker struct {
 }
 
 func NewMarketMaker(
+	db *sql.DB,
 	userRepo *repository.UserRepo,
 	balanceRepo *repository.BalanceRepo,
 	portfolioRepo *repository.PortfolioRepo,
 	txnRepo *repository.TransactionRepo,
 ) *MarketMaker {
 	return &MarketMaker{
+		db:            db,
 		userRepo:      userRepo,
 		balanceRepo:   balanceRepo,
 		portfolioRepo: portfolioRepo,
@@ -79,10 +83,8 @@ func (m *MarketMaker) tick() {
 		// Mean-reversion bias: nudge toward baseline (10 Grub)
 		if u.CurrentSharePrice > 15 && rand.Float64() < 0.35 {
 			changePct = -math.Abs(changePct)
-			isBuy = false
 		} else if u.CurrentSharePrice < 7 && rand.Float64() < 0.35 {
 			changePct = math.Abs(changePct)
-			isBuy = true
 		}
 
 		newPrice := u.CurrentSharePrice * (1 + changePct)
@@ -90,10 +92,28 @@ func (m *MarketMaker) tick() {
 		newPrice = math.Max(MinPrice, math.Min(MaxPrice, newPrice))
 
 		if newPrice != u.CurrentSharePrice {
-			if err := m.userRepo.UpdateSharePriceNoTx(u.ID, newPrice); err != nil {
+			// Use a DB transaction to atomically update price + record history
+			tx, err := m.db.Begin()
+			if err != nil {
+				log.Printf("Market maker: tx begin error for user %d: %v", u.ID, err)
 				continue
 			}
-			_ = m.txnRepo.RecordPriceHistoryNoTx(u.ID, newPrice)
+
+			_, err = tx.Exec(`UPDATE users SET current_share_price = $1 WHERE id = $2`, newPrice, u.ID)
+			if err != nil {
+				tx.Rollback()
+				continue
+			}
+
+			_, err = tx.Exec(`INSERT INTO price_history (user_id, price, timestamp) VALUES ($1, $2, $3)`, u.ID, newPrice, time.Now())
+			if err != nil {
+				tx.Rollback()
+				continue
+			}
+
+			if err := tx.Commit(); err != nil {
+				log.Printf("Market maker: tx commit error for user %d: %v", u.ID, err)
+			}
 		}
 	}
 
