@@ -57,12 +57,22 @@ func main() {
 }
 
 func runScheduledJobs(marketService *services.MarketService) {
-	ticker := time.NewTicker(24 * time.Hour)
-	defer ticker.Stop()
+	// Daily decay runs every 24h
+	decayTicker := time.NewTicker(24 * time.Hour)
+	defer decayTicker.Stop()
 
-	for range ticker.C {
-		log.Println("Running scheduled jobs...")
-		marketService.RunDailyDecay()
-		marketService.RunDailyDividends()
+	// Dividends run biweekly (every 14 days)
+	dividendTicker := time.NewTicker(14 * 24 * time.Hour)
+	defer dividendTicker.Stop()
+
+	for {
+		select {
+		case <-decayTicker.C:
+			log.Println("Running daily decay...")
+			marketService.RunDailyDecay()
+		case <-dividendTicker.C:
+			log.Println("Running biweekly dividends...")
+			marketService.RunDailyDividends()
+		}
 	}
 }

@@ -3,11 +3,11 @@ package services
 import "math"
 
 const (
-	VolatilityFactor = 0.1
+	VolatilityFactor = 5.0
 	BaselinePrice    = 10.0
 	DecayRate        = 0.005
-	MinPrice         = 1.0
-	MaxPrice         = 1000.0
+	MinPrice         = 0.01
+	MaxPrice         = 10000.0
 )
 
 func CalculateNewPrice(currentPrice, netShares, totalShares float64) float64 {
