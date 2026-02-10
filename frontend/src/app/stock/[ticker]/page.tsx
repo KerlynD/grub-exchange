@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams } from "next/navigation";
 import { motion } from "framer-motion";
 import AppLayout from "@/components/layout/AppLayout";
@@ -18,6 +18,8 @@ import {
   getPLColor,
 } from "@/lib/utils";
 
+const POLL_INTERVAL = 10_000; // 10 seconds
+
 type TimeRange = "1D" | "1W" | "1M" | "ALL";
 
 export default function StockDetailPage() {
@@ -28,10 +30,11 @@ export default function StockDetailPage() {
   const [loading, setLoading] = useState(true);
   const [timeRange, setTimeRange] = useState<TimeRange>("1M");
   const [userShares, setUserShares] = useState(0);
+  const initialFetch = useRef(true);
 
   const fetchData = useCallback(async () => {
     try {
-      setLoading(true);
+      if (initialFetch.current) setLoading(true);
       const data = await api.getStockDetail(ticker);
       setStock(data);
 
@@ -43,11 +46,14 @@ export default function StockDetailPage() {
       // handle error
     } finally {
       setLoading(false);
+      initialFetch.current = false;
     }
   }, [ticker]);
 
   useEffect(() => {
     fetchData();
+    const interval = setInterval(fetchData, POLL_INTERVAL);
+    return () => clearInterval(interval);
   }, [fetchData]);
 
   const handleTradeComplete = () => {

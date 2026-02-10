@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import {
   AreaChart,
   Area,
@@ -11,6 +11,8 @@ import {
 } from "recharts";
 import { PortfolioSnapshot } from "@/types";
 import * as api from "@/lib/api";
+
+const POLL_INTERVAL = 30_000; // 30 seconds
 
 function CustomTooltip({ active, payload }: any) {
   if (active && payload && payload.length) {
@@ -31,14 +33,27 @@ function CustomTooltip({ active, payload }: any) {
 export default function PortfolioChart({ height = 200 }: { height?: number }) {
   const [data, setData] = useState<PortfolioSnapshot[]>([]);
   const [loading, setLoading] = useState(true);
+  const initialFetch = useRef(true);
+
+  const fetchData = useCallback(async () => {
+    try {
+      const res = await api.getPortfolioGraph();
+      setData(res.snapshots || []);
+    } catch {
+      // silently fail
+    } finally {
+      if (initialFetch.current) {
+        setLoading(false);
+        initialFetch.current = false;
+      }
+    }
+  }, []);
 
   useEffect(() => {
-    api
-      .getPortfolioGraph()
-      .then((res) => setData(res.snapshots || []))
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, []);
+    fetchData();
+    const interval = setInterval(fetchData, POLL_INTERVAL);
+    return () => clearInterval(interval);
+  }, [fetchData]);
 
   if (loading) {
     return (
@@ -97,7 +112,7 @@ export default function PortfolioChart({ height = 200 }: { height?: number }) {
           stroke={color}
           strokeWidth={2}
           fill="url(#portfolioGrad)"
-          isAnimationActive
+          isAnimationActive={false}
           animationDuration={600}
         />
       </AreaChart>
