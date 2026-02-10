@@ -66,8 +66,8 @@ func runScheduledJobs(marketService *services.MarketService, achieveSvc *service
 	decayTicker := time.NewTicker(24 * time.Hour)
 	defer decayTicker.Stop()
 
-	// Dividends run biweekly (every 14 days)
-	dividendTicker := time.NewTicker(14 * 24 * time.Hour)
+	// Dividends run daily (every 24 hours)
+	dividendTicker := time.NewTicker(24 * time.Hour)
 	defer dividendTicker.Stop()
 
 	// Achievement check runs every hour (for Diamond Hands, Whale, etc.)
@@ -80,7 +80,7 @@ func runScheduledJobs(marketService *services.MarketService, achieveSvc *service
 			log.Println("Running daily decay...")
 			marketService.RunDailyDecay()
 		case <-dividendTicker.C:
-			log.Println("Running biweekly dividends...")
+			log.Println("Running daily dividends...")
 			marketService.RunDailyDividends()
 		case <-achieveTicker.C:
 			log.Println("Checking periodic achievements...")
