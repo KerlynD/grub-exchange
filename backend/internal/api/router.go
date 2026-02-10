@@ -51,6 +51,7 @@ func SetupRouter(
 			protected.PUT("/profile", profileHandler.UpdateProfile)
 
 			// Market
+			protected.GET("/market/overview", marketHandler.GetMarketOverview)
 			protected.GET("/stocks", marketHandler.GetStocks)
 			protected.GET("/stocks/:ticker", marketHandler.GetStockDetail)
 			protected.GET("/leaderboard", marketHandler.GetLeaderboard)

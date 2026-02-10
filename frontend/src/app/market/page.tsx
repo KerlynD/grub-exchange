@@ -4,7 +4,7 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import AppLayout from "@/components/layout/AppLayout";
 import StockCard from "@/components/market/StockCard";
-import Input from "@/components/ui/Input";
+import GrubMarketIndex from "@/components/market/GrubMarketIndex";
 import { useMarket } from "@/hooks/useMarket";
 import { Search } from "lucide-react";
 
@@ -31,6 +31,9 @@ export default function MarketPage() {
             All tradeable stocks on Grub Exchange
           </p>
         </div>
+
+        {/* Grub Market Index */}
+        <GrubMarketIndex />
 
         {/* Search */}
         <div className="relative">

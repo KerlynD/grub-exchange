@@ -15,6 +15,16 @@ func NewMarketHandler(marketService *services.MarketService) *MarketHandler {
 	return &MarketHandler{marketService: marketService}
 }
 
+func (h *MarketHandler) GetMarketOverview(c *gin.Context) {
+	overview, err := h.marketService.GetMarketOverview()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, overview)
+}
+
 func (h *MarketHandler) GetStocks(c *gin.Context) {
 	stocks, err := h.marketService.GetAllStocks()
 	if err != nil {

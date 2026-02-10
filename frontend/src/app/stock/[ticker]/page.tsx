@@ -9,7 +9,7 @@ import TradePanel from "@/components/trading/TradePanel";
 import TransactionHistory from "@/components/trading/TransactionHistory";
 import Card from "@/components/ui/Card";
 import { useAuth } from "@/contexts/AuthContext";
-import { StockDetail, PriceHistory } from "@/types";
+import { StockDetail, PriceHistory, PortfolioHolding } from "@/types";
 import * as api from "@/lib/api";
 import {
   formatGrub,
@@ -29,7 +29,7 @@ export default function StockDetailPage() {
   const [stock, setStock] = useState<StockDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [timeRange, setTimeRange] = useState<TimeRange>("1M");
-  const [userShares, setUserShares] = useState(0);
+  const [userHolding, setUserHolding] = useState<PortfolioHolding | null>(null);
   const initialFetch = useRef(true);
 
   const fetchData = useCallback(async () => {
@@ -38,10 +38,10 @@ export default function StockDetailPage() {
       const data = await api.getStockDetail(ticker);
       setStock(data);
 
-      // Get user's shares of this stock
+      // Get user's holding of this stock
       const portfolio = await api.getPortfolio();
       const holding = portfolio.holdings?.find((h) => h.ticker === ticker);
-      setUserShares(holding ? holding.num_shares : 0);
+      setUserHolding(holding || null);
     } catch {
       // handle error
     } finally {
@@ -67,15 +67,12 @@ export default function StockDetailPage() {
     let since: Date;
     switch (timeRange) {
       case "1D":
-        // Start of today (12:00 AM)
         since = new Date(now.getFullYear(), now.getMonth(), now.getDate());
         break;
       case "1W":
-        // Start of 7 days ago (12:00 AM)
         since = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7);
         break;
       case "1M":
-        // Start of 30 days ago (12:00 AM)
         since = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 30);
         break;
       default:
@@ -107,6 +104,12 @@ export default function StockDetailPage() {
   }
 
   const filteredHistory = filterByTimeRange(stock.price_history);
+
+  // Compute daily return for user's holding
+  const dailyReturn = userHolding
+    ? userHolding.num_shares * stock.change_24h
+    : 0;
+  const dailyReturnPercent = stock.change_24h_percent;
 
   return (
     <AppLayout>
@@ -179,27 +182,13 @@ export default function StockDetailPage() {
             {/* Market Stats */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               {[
-                {
-                  label: "Market Cap",
-                  value: formatNumber(stock.market_cap),
-                },
-                {
-                  label: "24h Volume",
-                  value: formatNumber(stock.volume_24h),
-                },
-                {
-                  label: "All-Time High",
-                  value: formatGrub(stock.all_time_high),
-                },
-                {
-                  label: "All-Time Low",
-                  value: formatGrub(stock.all_time_low),
-                },
+                { label: "Market Cap", value: formatNumber(stock.market_cap) },
+                { label: "24h Volume", value: formatNumber(stock.volume_24h) },
+                { label: "All-Time High", value: formatGrub(stock.all_time_high) },
+                { label: "All-Time Low", value: formatGrub(stock.all_time_low) },
               ].map((stat) => (
                 <Card key={stat.label}>
-                  <p className="text-text-secondary text-xs mb-1">
-                    {stat.label}
-                  </p>
+                  <p className="text-text-secondary text-xs mb-1">{stat.label}</p>
                   <p className="text-white font-semibold">{stat.value}</p>
                 </Card>
               ))}
@@ -224,9 +213,72 @@ export default function StockDetailPage() {
             </Card>
           </div>
 
-          {/* Trade Panel */}
+          {/* Right Column: Holdings + Trade Panel */}
           <div className="lg:col-span-1">
-            <div className="lg:sticky lg:top-8">
+            <div className="lg:sticky lg:top-8 space-y-4">
+              {/* Your Holdings (only if user owns this stock) */}
+              {userHolding && userHolding.num_shares > 0 && (
+                <Card>
+                  <h3 className="text-white font-semibold mb-3">Your Position</h3>
+                  <div className="space-y-3">
+                    {/* Market Value */}
+                    <div className="flex items-center justify-between">
+                      <p className="text-text-secondary text-sm">Market Value</p>
+                      <p className="text-white font-semibold text-sm">
+                        {formatGrub(userHolding.total_value)} GRUB
+                      </p>
+                    </div>
+
+                    {/* Shares */}
+                    <div className="flex items-center justify-between">
+                      <p className="text-text-secondary text-sm">Shares</p>
+                      <p className="text-white text-sm">
+                        {userHolding.num_shares.toFixed(4)}
+                      </p>
+                    </div>
+
+                    {/* Avg Cost */}
+                    <div className="flex items-center justify-between">
+                      <p className="text-text-secondary text-sm">Avg Cost</p>
+                      <p className="text-white text-sm">
+                        {formatGrub(userHolding.avg_purchase_price)} GRUB
+                      </p>
+                    </div>
+
+                    <div className="border-t border-border-dark pt-3 space-y-2">
+                      {/* Total Return */}
+                      <div className="flex items-center justify-between">
+                        <p className="text-text-secondary text-sm">Total Return</p>
+                        <div className="text-right">
+                          <p className={`text-sm font-semibold ${getPLColor(userHolding.profit_loss)}`}>
+                            {userHolding.profit_loss >= 0 ? "+" : ""}
+                            {formatGrub(userHolding.profit_loss)} GRUB
+                          </p>
+                          <p className={`text-xs ${getPLColor(userHolding.profit_loss_percent)}`}>
+                            {formatPercent(userHolding.profit_loss_percent)}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Today's Return */}
+                      <div className="flex items-center justify-between">
+                        <p className="text-text-secondary text-sm">Today</p>
+                        <div className="text-right">
+                          <p className={`text-sm font-semibold ${getPLColor(dailyReturn)}`}>
+                            {dailyReturn >= 0 ? "+" : ""}
+                            {formatGrub(dailyReturn)} GRUB
+                          </p>
+                          <p className={`text-xs ${getPLColor(dailyReturnPercent)}`}>
+                            {formatPercent(dailyReturnPercent)}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </Card>
+              )}
+
+              {/* Trade Panel */}
               {user && stock.user.ticker === user.ticker ? (
                 <Card className="text-center py-8">
                   <div className="w-12 h-12 rounded-full bg-card-hover flex items-center justify-center mx-auto mb-3">
@@ -246,7 +298,7 @@ export default function StockDetailPage() {
                   ticker={stock.user.ticker}
                   currentPrice={stock.user.current_share_price}
                   userBalance={user?.grub_balance || 0}
-                  userShares={userShares}
+                  userShares={userHolding?.num_shares || 0}
                   onTradeComplete={handleTradeComplete}
                 />
               )}

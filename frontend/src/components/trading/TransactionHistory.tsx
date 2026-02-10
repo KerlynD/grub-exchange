@@ -43,22 +43,26 @@ export default function TransactionHistory({ transactions }: TransactionHistoryP
             </div>
             <div>
               <p className="text-white text-sm font-medium">
-                {txn.transaction_type} {txn.stock_ticker}
+                {txn.buyer_username}{" "}
+                <span className="text-text-secondary">
+                  {txn.transaction_type === "BUY" ? "bought" : "sold"}
+                </span>
               </p>
               <p className="text-text-secondary text-xs">
-                {txn.num_shares} shares @ {formatGrub(txn.price_per_share)}
+                {txn.num_shares.toFixed(2)} shares @ {formatGrub(txn.price_per_share)}
               </p>
             </div>
           </div>
           <div className="text-right">
+            {/* Amounts are relative to the stock: BUY = money flowing in (+), SELL = money flowing out (-) */}
             <p
               className={`text-sm font-semibold ${
                 txn.transaction_type === "BUY"
-                  ? "text-grub-red"
-                  : "text-grub-green"
+                  ? "text-grub-green"
+                  : "text-grub-red"
               }`}
             >
-              {txn.transaction_type === "BUY" ? "-" : "+"}
+              {txn.transaction_type === "BUY" ? "+" : "-"}
               {formatGrub(txn.total_grub)}
             </p>
             <p className="text-text-secondary text-xs">

@@ -66,6 +66,58 @@ func (s *MarketService) GetAllStocks() ([]models.StockListItem, error) {
 	return stocks, nil
 }
 
+func (s *MarketService) GetMarketOverview() (*models.MarketOverview, error) {
+	users, err := s.userRepo.GetAll()
+	if err != nil {
+		return nil, err
+	}
+
+	var totalMarketCap float64
+	for _, u := range users {
+		totalMarketCap += float64(u.SharesOutstanding) * u.CurrentSharePrice
+	}
+
+	// Get all balances to compute total grub in circulation vs invested
+	balances, err := s.balanceRepo.GetAllBalances()
+	if err != nil {
+		return nil, err
+	}
+
+	var totalCash float64
+	for _, b := range balances {
+		totalCash += b.GrubBalance
+	}
+
+	// Total invested = total market cap of all holdings (approximate)
+	holdings, err := s.portfolioRepo.GetAllHoldings()
+	if err != nil {
+		return nil, err
+	}
+	var totalInvested float64
+	for _, h := range holdings {
+		stockUser, err := s.userRepo.GetByID(h.StockUserID)
+		if err != nil {
+			continue
+		}
+		totalInvested += h.NumShares * stockUser.CurrentSharePrice
+	}
+
+	totalGrub := totalCash + totalInvested
+	investedPercent := 0.0
+	if totalGrub > 0 {
+		investedPercent = (totalInvested / totalGrub) * 100
+	}
+
+	return &models.MarketOverview{
+		TotalMarketCap:  totalMarketCap,
+		TotalGrub:       totalGrub,
+		TotalInvested:   totalInvested,
+		TotalCash:       totalCash,
+		InvestedPercent: investedPercent,
+		TotalStocks:     len(users),
+	}, nil
+}
+
 func (s *MarketService) GetStockDetail(ticker string) (*models.StockDetail, error) {
 	user, err := s.userRepo.GetByTicker(ticker)
 	if err != nil {
@@ -185,24 +237,46 @@ func (s *MarketService) GetLeaderboard() (*models.LeaderboardData, error) {
 		})
 	}
 
-	// Richest Traders
-	balances, err := s.balanceRepo.GetTopByBalance(10)
-	if err != nil {
-		balances = []models.Balance{}
+	// Richest Traders (by total portfolio value: cash + holdings)
+	type userWealth struct {
+		user       models.User
+		totalValue float64
 	}
-
-	var richest []models.LeaderboardEntry
-	for i, b := range balances {
-		user, err := s.userRepo.GetByID(b.UserID)
+	var wealthEntries []userWealth
+	for _, u := range users {
+		balance, err := s.balanceRepo.GetByUserID(u.ID)
 		if err != nil {
 			continue
 		}
+		holdingsValue := 0.0
+		holdings, err := s.portfolioRepo.GetByOwner(u.ID)
+		if err == nil {
+			for _, h := range holdings {
+				stockUser, err := s.userRepo.GetByID(h.StockUserID)
+				if err != nil {
+					continue
+				}
+				holdingsValue += h.NumShares * stockUser.CurrentSharePrice
+			}
+		}
+		total := balance.GrubBalance + holdingsValue
+		wealthEntries = append(wealthEntries, userWealth{user: u, totalValue: total})
+	}
+	sort.Slice(wealthEntries, func(i, j int) bool {
+		return wealthEntries[i].totalValue > wealthEntries[j].totalValue
+	})
+
+	var richest []models.LeaderboardEntry
+	for i, w := range wealthEntries {
+		if i >= 10 {
+			break
+		}
 		richest = append(richest, models.LeaderboardEntry{
 			Rank:     i + 1,
-			UserID:   user.ID,
-			Username: user.Username,
-			Ticker:   user.Ticker,
-			Value:    b.GrubBalance,
+			UserID:   w.user.ID,
+			Username: w.user.Username,
+			Ticker:   w.user.Ticker,
+			Value:    w.totalValue,
 		})
 	}
 

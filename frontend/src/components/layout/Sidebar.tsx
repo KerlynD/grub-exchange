@@ -11,6 +11,7 @@ import {
   User,
   LogOut,
 } from "lucide-react";
+import ShootingStar from "@/components/icons/ShootingStar";
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -29,8 +30,9 @@ export default function Sidebar() {
       {/* Desktop Sidebar */}
       <aside className="hidden md:flex flex-col w-64 bg-card-bg border-r border-border-dark h-screen fixed left-0 top-0">
         <div className="p-6 border-b border-border-dark">
-          <h1 className="text-xl font-bold text-white">
-            <span className="text-grub-green">Grub</span> Exchange
+          <h1 className="text-xl font-bold text-white flex items-center gap-2">
+            <ShootingStar size={22} className="text-grub-green" />
+            <span><span className="text-grub-green">Grub</span> Exchange</span>
           </h1>
           {user && (
             <p className="text-text-secondary text-xs mt-1">

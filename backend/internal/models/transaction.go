@@ -74,3 +74,12 @@ type LeaderboardEntry struct {
 	Value    float64 `json:"value"`
 	Change   float64 `json:"change,omitempty"`
 }
+
+type MarketOverview struct {
+	TotalMarketCap  float64 `json:"total_market_cap"`
+	TotalGrub       float64 `json:"total_grub"`
+	TotalInvested   float64 `json:"total_invested"`
+	TotalCash       float64 `json:"total_cash"`
+	InvestedPercent float64 `json:"invested_percent"`
+	TotalStocks     int     `json:"total_stocks"`
+}

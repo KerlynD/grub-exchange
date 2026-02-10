@@ -10,6 +10,7 @@ import {
   Notification,
   Achievement,
   UserAchievement,
+  MarketOverview,
 } from "@/types";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
@@ -94,6 +95,11 @@ export async function logout(): Promise<void> {
 
 export async function getMe(): Promise<{ user: User }> {
   return fetchAPI("/api/auth/me");
+}
+
+// Market
+export async function getMarketOverview(): Promise<MarketOverview> {
+  return fetchAPI("/api/market/overview");
 }
 
 // Stocks
