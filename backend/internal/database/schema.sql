@@ -88,7 +88,18 @@ CREATE TABLE IF NOT EXISTS user_achievements (
     UNIQUE(user_id, achievement_id)
 );
 
+-- Market snapshots for the Grub Market index chart
+CREATE TABLE IF NOT EXISTS market_snapshots (
+    id SERIAL PRIMARY KEY,
+    total_market_cap DOUBLE PRECISION NOT NULL,
+    total_invested DOUBLE PRECISION NOT NULL,
+    total_cash DOUBLE PRECISION NOT NULL,
+    total_grub DOUBLE PRECISION NOT NULL,
+    timestamp TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- Indexes for performance
+CREATE INDEX IF NOT EXISTS idx_market_snapshots_time ON market_snapshots(timestamp DESC);
 CREATE INDEX IF NOT EXISTS idx_portfolio_snapshots_user_time ON portfolio_snapshots(user_id, timestamp DESC);
 CREATE INDEX IF NOT EXISTS idx_portfolios_owner ON portfolios(owner_id);
 CREATE INDEX IF NOT EXISTS idx_portfolios_stock ON portfolios(stock_user_id);

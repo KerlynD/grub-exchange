@@ -94,6 +94,15 @@ export interface TradeRequest {
   grub_amount?: number;
 }
 
+export interface MarketSnapshot {
+  id: number;
+  total_market_cap: number;
+  total_invested: number;
+  total_cash: number;
+  total_grub: number;
+  timestamp: string;
+}
+
 export interface MarketOverview {
   total_market_cap: number;
   total_grub: number;
@@ -101,6 +110,7 @@ export interface MarketOverview {
   total_cash: number;
   invested_percent: number;
   total_stocks: number;
+  history: MarketSnapshot[];
 }
 
 export interface PortfolioSnapshot {

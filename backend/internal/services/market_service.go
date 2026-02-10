@@ -13,6 +13,7 @@ type MarketService struct {
 	balanceRepo   *repository.BalanceRepo
 	portfolioRepo *repository.PortfolioRepo
 	txnRepo       *repository.TransactionRepo
+	snapshotRepo  *repository.MarketSnapshotRepo
 }
 
 func NewMarketService(
@@ -20,12 +21,14 @@ func NewMarketService(
 	balanceRepo *repository.BalanceRepo,
 	portfolioRepo *repository.PortfolioRepo,
 	txnRepo *repository.TransactionRepo,
+	snapshotRepo *repository.MarketSnapshotRepo,
 ) *MarketService {
 	return &MarketService{
 		userRepo:      userRepo,
 		balanceRepo:   balanceRepo,
 		portfolioRepo: portfolioRepo,
 		txnRepo:       txnRepo,
+		snapshotRepo:  snapshotRepo,
 	}
 }
 
@@ -108,6 +111,12 @@ func (s *MarketService) GetMarketOverview() (*models.MarketOverview, error) {
 		investedPercent = (totalInvested / totalGrub) * 100
 	}
 
+	// Get historical snapshots (last 30 days)
+	history, _ := s.snapshotRepo.GetSince(time.Now().Add(-30 * 24 * time.Hour))
+	if history == nil {
+		history = []models.MarketSnapshot{}
+	}
+
 	return &models.MarketOverview{
 		TotalMarketCap:  totalMarketCap,
 		TotalGrub:       totalGrub,
@@ -115,7 +124,28 @@ func (s *MarketService) GetMarketOverview() (*models.MarketOverview, error) {
 		TotalCash:       totalCash,
 		InvestedPercent: investedPercent,
 		TotalStocks:     len(users),
+		History:         history,
 	}, nil
+}
+
+// RecordMarketSnapshot computes current market stats and saves a snapshot
+func (s *MarketService) RecordMarketSnapshot() {
+	overview, err := s.GetMarketOverview()
+	if err != nil {
+		log.Printf("Error computing market snapshot: %v", err)
+		return
+	}
+
+	snap := &models.MarketSnapshot{
+		TotalMarketCap: overview.TotalMarketCap,
+		TotalInvested:  overview.TotalInvested,
+		TotalCash:      overview.TotalCash,
+		TotalGrub:      overview.TotalGrub,
+	}
+
+	if err := s.snapshotRepo.Record(snap); err != nil {
+		log.Printf("Error recording market snapshot: %v", err)
+	}
 }
 
 func (s *MarketService) GetStockDetail(ticker string) (*models.StockDetail, error) {
@@ -158,12 +188,37 @@ func (s *MarketService) GetStockDetail(ticker string) (*models.StockDetail, erro
 }
 
 func (s *MarketService) GetLeaderboard() (*models.LeaderboardData, error) {
+	// --- Batch-load all data upfront to avoid N+1 queries ---
 	users, err := s.userRepo.GetAll()
 	if err != nil {
 		return nil, err
 	}
 
-	// Most Valuable Stocks
+	// Build user lookup map by ID
+	userMap := make(map[int]models.User, len(users))
+	for _, u := range users {
+		userMap[u.ID] = u
+	}
+
+	// Batch: all prices 24h ago (single query)
+	prices24hAgo, _ := s.txnRepo.GetPricesAtBatch(time.Now().Add(-24 * time.Hour))
+
+	// Batch: all balances (single query)
+	allBalances, _ := s.balanceRepo.GetAllBalances()
+	balanceMap := make(map[int]float64, len(allBalances))
+	for _, b := range allBalances {
+		balanceMap[b.UserID] = b.GrubBalance
+	}
+
+	// Batch: all holdings (single query)
+	allHoldings, _ := s.portfolioRepo.GetAllHoldings()
+	// Group holdings by owner
+	holdingsByOwner := make(map[int][]models.Portfolio)
+	for _, h := range allHoldings {
+		holdingsByOwner[h.OwnerID] = append(holdingsByOwner[h.OwnerID], h)
+	}
+
+	// --- 1. Most Valuable Stocks ---
 	sortedByPrice := make([]models.User, len(users))
 	copy(sortedByPrice, users)
 	sort.Slice(sortedByPrice, func(i, j int) bool {
@@ -184,14 +239,17 @@ func (s *MarketService) GetLeaderboard() (*models.LeaderboardData, error) {
 		})
 	}
 
-	// Biggest Gainers and Losers (24h)
+	// --- 2. Biggest Gainers and Losers (24h) ---
 	type userChange struct {
 		user   models.User
 		change float64
 	}
 	var changes []userChange
 	for _, u := range users {
-		price24hAgo, _ := s.txnRepo.GetPriceAt(u.ID, time.Now().Add(-24*time.Hour))
+		price24hAgo := 10.0
+		if p, ok := prices24hAgo[u.ID]; ok {
+			price24hAgo = p
+		}
 		changePercent := 0.0
 		if price24hAgo > 0 {
 			changePercent = ((u.CurrentSharePrice - price24hAgo) / price24hAgo) * 100
@@ -237,30 +295,21 @@ func (s *MarketService) GetLeaderboard() (*models.LeaderboardData, error) {
 		})
 	}
 
-	// Richest Traders (by total portfolio value: cash + holdings)
+	// --- 3. Richest Traders (cash + holdings using pre-loaded data) ---
 	type userWealth struct {
 		user       models.User
 		totalValue float64
 	}
 	var wealthEntries []userWealth
 	for _, u := range users {
-		balance, err := s.balanceRepo.GetByUserID(u.ID)
-		if err != nil {
-			continue
-		}
+		cash := balanceMap[u.ID]
 		holdingsValue := 0.0
-		holdings, err := s.portfolioRepo.GetByOwner(u.ID)
-		if err == nil {
-			for _, h := range holdings {
-				stockUser, err := s.userRepo.GetByID(h.StockUserID)
-				if err != nil {
-					continue
-				}
-				holdingsValue += h.NumShares * stockUser.CurrentSharePrice
+		for _, h := range holdingsByOwner[u.ID] {
+			if su, ok := userMap[h.StockUserID]; ok {
+				holdingsValue += h.NumShares * su.CurrentSharePrice
 			}
 		}
-		total := balance.GrubBalance + holdingsValue
-		wealthEntries = append(wealthEntries, userWealth{user: u, totalValue: total})
+		wealthEntries = append(wealthEntries, userWealth{user: u, totalValue: cash + holdingsValue})
 	}
 	sort.Slice(wealthEntries, func(i, j int) bool {
 		return wealthEntries[i].totalValue > wealthEntries[j].totalValue
@@ -280,21 +329,19 @@ func (s *MarketService) GetLeaderboard() (*models.LeaderboardData, error) {
 		})
 	}
 
-	// Best Portfolio Performance
+	// --- 4. Best Portfolio Performance (using pre-loaded data) ---
 	var perfEntries []models.LeaderboardEntry
 	for _, u := range users {
-		holdings, err := s.portfolioRepo.GetByOwner(u.ID)
-		if err != nil || len(holdings) == 0 {
+		holdings := holdingsByOwner[u.ID]
+		if len(holdings) == 0 {
 			continue
 		}
 		var totalValue, totalCost float64
 		for _, h := range holdings {
-			stockUser, err := s.userRepo.GetByID(h.StockUserID)
-			if err != nil {
-				continue
+			if su, ok := userMap[h.StockUserID]; ok {
+				totalValue += h.NumShares * su.CurrentSharePrice
+				totalCost += h.NumShares * h.AvgPurchasePrice
 			}
-			totalValue += h.NumShares * stockUser.CurrentSharePrice
-			totalCost += h.NumShares * h.AvgPurchasePrice
 		}
 		plPercent := 0.0
 		if totalCost > 0 {

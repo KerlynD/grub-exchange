@@ -76,10 +76,20 @@ type LeaderboardEntry struct {
 }
 
 type MarketOverview struct {
-	TotalMarketCap  float64 `json:"total_market_cap"`
-	TotalGrub       float64 `json:"total_grub"`
-	TotalInvested   float64 `json:"total_invested"`
-	TotalCash       float64 `json:"total_cash"`
-	InvestedPercent float64 `json:"invested_percent"`
-	TotalStocks     int     `json:"total_stocks"`
+	TotalMarketCap  float64          `json:"total_market_cap"`
+	TotalGrub       float64          `json:"total_grub"`
+	TotalInvested   float64          `json:"total_invested"`
+	TotalCash       float64          `json:"total_cash"`
+	InvestedPercent float64          `json:"invested_percent"`
+	TotalStocks     int              `json:"total_stocks"`
+	History         []MarketSnapshot `json:"history"`
+}
+
+type MarketSnapshot struct {
+	ID             int     `json:"id"`
+	TotalMarketCap float64 `json:"total_market_cap"`
+	TotalInvested  float64 `json:"total_invested"`
+	TotalCash      float64 `json:"total_cash"`
+	TotalGrub      float64 `json:"total_grub"`
+	Timestamp      string  `json:"timestamp"`
 }

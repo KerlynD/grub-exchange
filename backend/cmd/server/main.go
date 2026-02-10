@@ -31,7 +31,8 @@ func main() {
 	achieveSvc := services.NewAchievementService(achieveRepo, balanceRepo, portfolioRepo, userRepo)
 	tradingService := services.NewTradingService(db, userRepo, balanceRepo, portfolioRepo, txnRepo, notifRepo, achieveSvc)
 	portfolioService := services.NewPortfolioService(userRepo, balanceRepo, portfolioRepo, txnRepo)
-	marketService := services.NewMarketService(userRepo, balanceRepo, portfolioRepo, txnRepo)
+	snapshotRepo := repository.NewMarketSnapshotRepo(db)
+	marketService := services.NewMarketService(userRepo, balanceRepo, portfolioRepo, txnRepo, snapshotRepo)
 	marketMaker := services.NewMarketMaker(db, userRepo, balanceRepo, portfolioRepo, txnRepo)
 
 	// Initialize handlers
@@ -74,6 +75,13 @@ func runScheduledJobs(marketService *services.MarketService, achieveSvc *service
 	achieveTicker := time.NewTicker(1 * time.Hour)
 	defer achieveTicker.Stop()
 
+	// Market snapshot every 5 minutes for the Grub Market chart
+	snapshotTicker := time.NewTicker(5 * time.Minute)
+	defer snapshotTicker.Stop()
+
+	// Record initial snapshot on startup
+	marketService.RecordMarketSnapshot()
+
 	for {
 		select {
 		case <-decayTicker.C:
@@ -85,6 +93,8 @@ func runScheduledJobs(marketService *services.MarketService, achieveSvc *service
 		case <-achieveTicker.C:
 			log.Println("Checking periodic achievements...")
 			checkPeriodicAchievements(achieveSvc, userRepo)
+		case <-snapshotTicker.C:
+			marketService.RecordMarketSnapshot()
 		}
 	}
 }

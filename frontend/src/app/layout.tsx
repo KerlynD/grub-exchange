@@ -5,6 +5,9 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "Grub Exchange",
   description: "Buy and sell shares of your friends",
+  icons: {
+    icon: "/favicon.svg",
+  },
 };
 
 export default function RootLayout({

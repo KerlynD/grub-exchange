@@ -186,3 +186,30 @@ func (r *TransactionRepo) GetPriceAt(userID int, at time.Time) (float64, error) 
 	}
 	return price, err
 }
+
+// GetPricesAtBatch returns the price for each user_id at a given time in a single query.
+// Uses DISTINCT ON to get the latest price before or at the timestamp per user.
+func (r *TransactionRepo) GetPricesAtBatch(at time.Time) (map[int]float64, error) {
+	rows, err := r.db.Query(
+		`SELECT DISTINCT ON (user_id) user_id, price
+		 FROM price_history
+		 WHERE timestamp <= $1
+		 ORDER BY user_id, timestamp DESC`,
+		at,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	prices := make(map[int]float64)
+	for rows.Next() {
+		var uid int
+		var price float64
+		if err := rows.Scan(&uid, &price); err != nil {
+			return nil, err
+		}
+		prices[uid] = price
+	}
+	return prices, nil
+}
