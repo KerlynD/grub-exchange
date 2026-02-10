@@ -11,15 +11,41 @@ import {
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
+// Token management — fallback for browsers that block cross-site cookies (mobile Safari, etc.)
+function getToken(): string | null {
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem("grub_token");
+}
+
+function setToken(token: string) {
+  if (typeof window !== "undefined") {
+    localStorage.setItem("grub_token", token);
+  }
+}
+
+function clearToken() {
+  if (typeof window !== "undefined") {
+    localStorage.removeItem("grub_token");
+  }
+}
+
 async function fetchAPI<T>(
   endpoint: string,
   options?: RequestInit
 ): Promise<T> {
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+
+  // Always attach Bearer token if available
+  const token = getToken();
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+
   const res = await fetch(`${API_URL}${endpoint}`, {
     credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-    },
+    headers,
     ...options,
   });
 
@@ -38,24 +64,29 @@ export async function register(data: {
   password: string;
   first_name: string;
 }): Promise<{ user: User }> {
-  return fetchAPI("/api/auth/register", {
+  const res = await fetchAPI<{ user: User; token: string }>("/api/auth/register", {
     method: "POST",
     body: JSON.stringify(data),
   });
+  if (res.token) setToken(res.token);
+  return { user: res.user };
 }
 
 export async function login(data: {
   email: string;
   password: string;
 }): Promise<{ user: User }> {
-  return fetchAPI("/api/auth/login", {
+  const res = await fetchAPI<{ user: User; token: string }>("/api/auth/login", {
     method: "POST",
     body: JSON.stringify(data),
   });
+  if (res.token) setToken(res.token);
+  return { user: res.user };
 }
 
 export async function logout(): Promise<void> {
   await fetchAPI("/api/auth/logout", { method: "POST" });
+  clearToken();
 }
 
 export async function getMe(): Promise<{ user: User }> {

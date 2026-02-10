@@ -1,7 +1,6 @@
 package services
 
 import (
-	"grub-exchange/internal/models"
 	"grub-exchange/internal/repository"
 	"log"
 	"math"
@@ -94,35 +93,7 @@ func (m *MarketMaker) tick() {
 			if err := m.userRepo.UpdateSharePriceNoTx(u.ID, newPrice); err != nil {
 				continue
 			}
-			if err := m.txnRepo.RecordPriceHistoryNoTx(u.ID, newPrice); err != nil {
-				continue
-			}
-
-			// Record a transaction so it shows up in recent trades
-			if m.marketUserID > 0 {
-				priceDiff := math.Abs(newPrice - u.CurrentSharePrice)
-				// Simulate a small trade: ~0.01 to 0.1 shares
-				numShares := math.Round((0.01+rand.Float64()*0.09)*10000) / 10000
-				totalGrub := math.Round(numShares*u.CurrentSharePrice*100) / 100
-				if totalGrub < 0.01 {
-					totalGrub = 0.01
-				}
-				_ = priceDiff
-
-				txnType := "buy"
-				if !isBuy {
-					txnType = "sell"
-				}
-
-				_ = m.txnRepo.CreateNoTx(&models.Transaction{
-					BuyerID:         m.marketUserID,
-					StockUserID:     u.ID,
-					TransactionType: txnType,
-					NumShares:       numShares,
-					PricePerShare:   u.CurrentSharePrice,
-					TotalGrub:       totalGrub,
-				})
-			}
+			_ = m.txnRepo.RecordPriceHistoryNoTx(u.ID, newPrice)
 		}
 	}
 

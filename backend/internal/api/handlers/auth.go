@@ -31,7 +31,7 @@ func (h *AuthHandler) Register(c *gin.Context) {
 	}
 
 	setAuthCookie(c, token)
-	c.JSON(http.StatusCreated, gin.H{"user": user})
+	c.JSON(http.StatusCreated, gin.H{"user": user, "token": token})
 }
 
 func (h *AuthHandler) Login(c *gin.Context) {
@@ -48,7 +48,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	}
 
 	setAuthCookie(c, token)
-	c.JSON(http.StatusOK, gin.H{"user": user})
+	c.JSON(http.StatusOK, gin.H{"user": user, "token": token})
 }
 
 func (h *AuthHandler) Logout(c *gin.Context) {

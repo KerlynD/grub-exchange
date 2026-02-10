@@ -40,7 +40,7 @@ func main() {
 
 	// Start background jobs
 	go runScheduledJobs(marketService)
-	go marketMaker.Run(30 * time.Second) // nudge prices every 30 seconds
+	go marketMaker.Run(60 * time.Second) // nudge prices every 60 seconds
 
 	// Setup router
 	router := api.SetupRouter(authHandler, tradingHandler, portfolioHandler, marketHandler, profileHandler)
