@@ -61,13 +61,16 @@ export default function StockDetailPage() {
     let since: Date;
     switch (timeRange) {
       case "1D":
-        since = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+        // Start of today (12:00 AM)
+        since = new Date(now.getFullYear(), now.getMonth(), now.getDate());
         break;
       case "1W":
-        since = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        // Start of 7 days ago (12:00 AM)
+        since = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7);
         break;
       case "1M":
-        since = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+        // Start of 30 days ago (12:00 AM)
+        since = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 30);
         break;
       default:
         return data;
@@ -164,7 +167,7 @@ export default function StockDetailPage() {
 
             {/* Price Chart */}
             <Card className="p-2">
-              <PriceChart data={filteredHistory} height={350} />
+              <PriceChart data={filteredHistory} height={350} timeRange={timeRange} />
             </Card>
 
             {/* Market Stats */}

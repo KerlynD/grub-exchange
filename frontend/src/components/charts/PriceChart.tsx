@@ -13,11 +13,15 @@ import { PriceHistory } from "@/types";
 interface PriceChartProps {
   data: PriceHistory[];
   height?: number;
+  timeRange?: string;
 }
 
-function formatTime(timestamp: string) {
+function formatTick(timestamp: string, range?: string) {
   const d = new Date(timestamp);
-  return d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
+  if (range === "1D") {
+    return d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+  }
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
 function CustomTooltip({ active, payload }: any) {
@@ -36,7 +40,7 @@ function CustomTooltip({ active, payload }: any) {
   return null;
 }
 
-export default function PriceChart({ data, height = 300 }: PriceChartProps) {
+export default function PriceChart({ data, height = 300, timeRange }: PriceChartProps) {
   if (!data || data.length === 0) {
     return (
       <div
@@ -62,7 +66,7 @@ export default function PriceChart({ data, height = 300 }: PriceChartProps) {
         </defs>
         <XAxis
           dataKey="timestamp"
-          tickFormatter={formatTime}
+          tickFormatter={(v) => formatTick(v, timeRange)}
           stroke="#8E8E93"
           tick={{ fontSize: 11 }}
           axisLine={false}

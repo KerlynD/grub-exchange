@@ -70,8 +70,8 @@ func (m *MarketMaker) tick() {
 		// Apply a direct random percentage change: ±0.05% to ±0.5%
 		changePct := (0.0005 + rand.Float64()*0.005) // 0.05% to 0.55%
 
-		// Random direction
-		isBuy := rand.Float64() >= 0.5
+		// Random direction — 65% chance to buy, 35% to sell (bullish bias)
+		isBuy := rand.Float64() < 0.65
 		if !isBuy {
 			changePct = -changePct
 		}
