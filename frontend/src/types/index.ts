@@ -140,6 +140,18 @@ export interface Achievement {
   icon: string;
 }
 
+export interface StockPost {
+  id: number;
+  author_id: number;
+  author_username: string;
+  stock_ticker: string;
+  content: string;
+  likes: number;
+  dislikes: number;
+  user_vote: number; // 1 = liked, -1 = disliked, 0 = none
+  created_at: string;
+}
+
 export interface UserAchievement {
   id: number;
   user_id: number;

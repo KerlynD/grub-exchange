@@ -11,6 +11,7 @@ import {
   Achievement,
   UserAchievement,
   MarketOverview,
+  StockPost,
 } from "@/types";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
@@ -197,4 +198,31 @@ export async function getAchievements(): Promise<{
   all: Achievement[];
 }> {
   return fetchAPI("/api/achievements");
+}
+
+// News / Posts
+export async function getStockPosts(
+  ticker: string
+): Promise<{ posts: StockPost[] }> {
+  return fetchAPI(`/api/stocks/${ticker}/posts`);
+}
+
+export async function createStockPost(
+  ticker: string,
+  content: string
+): Promise<StockPost> {
+  return fetchAPI(`/api/stocks/${ticker}/posts`, {
+    method: "POST",
+    body: JSON.stringify({ content }),
+  });
+}
+
+export async function votePost(
+  postId: number,
+  voteType: 1 | -1
+): Promise<{ message: string }> {
+  return fetchAPI(`/api/posts/${postId}/vote`, {
+    method: "POST",
+    body: JSON.stringify({ vote_type: voteType }),
+  });
 }

@@ -15,6 +15,7 @@ func SetupRouter(
 	profileHandler *handlers.ProfileHandler,
 	notifHandler *handlers.NotificationHandler,
 	achieveHandler *handlers.AchievementHandler,
+	postHandler *handlers.PostHandler,
 ) *gin.Engine {
 	r := gin.Default()
 
@@ -63,6 +64,11 @@ func SetupRouter(
 
 			// Achievements
 			protected.GET("/achievements", achieveHandler.GetMyAchievements)
+
+			// News / Posts
+			protected.GET("/stocks/:ticker/posts", postHandler.GetPosts)
+			protected.POST("/stocks/:ticker/posts", postHandler.CreatePost)
+			protected.POST("/posts/:id/vote", postHandler.VotePost)
 		}
 	}
 

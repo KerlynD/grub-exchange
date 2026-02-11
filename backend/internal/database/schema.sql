@@ -88,6 +88,32 @@ CREATE TABLE IF NOT EXISTS user_achievements (
     UNIQUE(user_id, achievement_id)
 );
 
+-- Stock news posts
+CREATE TABLE IF NOT EXISTS stock_posts (
+    id SERIAL PRIMARY KEY,
+    author_id INTEGER NOT NULL REFERENCES users(id),
+    stock_user_id INTEGER NOT NULL REFERENCES users(id),
+    content TEXT NOT NULL,
+    likes INTEGER DEFAULT 0,
+    dislikes INTEGER DEFAULT 0,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Post votes (one vote per user per post)
+CREATE TABLE IF NOT EXISTS post_votes (
+    id SERIAL PRIMARY KEY,
+    post_id INTEGER NOT NULL REFERENCES stock_posts(id) ON DELETE CASCADE,
+    user_id INTEGER NOT NULL REFERENCES users(id),
+    vote_type INTEGER NOT NULL, -- 1 = like, -1 = dislike
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE(post_id, user_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_stock_posts_stock ON stock_posts(stock_user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_stock_posts_engagement ON stock_posts(stock_user_id, (likes + dislikes) DESC);
+CREATE INDEX IF NOT EXISTS idx_post_votes_post ON post_votes(post_id);
+CREATE INDEX IF NOT EXISTS idx_post_votes_user ON post_votes(user_id, post_id);
+
 -- Market snapshots for the Grub Market index chart
 CREATE TABLE IF NOT EXISTS market_snapshots (
     id SERIAL PRIMARY KEY,

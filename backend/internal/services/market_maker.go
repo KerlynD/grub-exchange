@@ -15,6 +15,7 @@ type MarketMaker struct {
 	balanceRepo   *repository.BalanceRepo
 	portfolioRepo *repository.PortfolioRepo
 	txnRepo       *repository.TransactionRepo
+	postRepo      *repository.PostRepo
 	marketUserID  int
 }
 
@@ -24,6 +25,7 @@ func NewMarketMaker(
 	balanceRepo *repository.BalanceRepo,
 	portfolioRepo *repository.PortfolioRepo,
 	txnRepo *repository.TransactionRepo,
+	postRepo *repository.PostRepo,
 ) *MarketMaker {
 	return &MarketMaker{
 		db:            db,
@@ -31,6 +33,7 @@ func NewMarketMaker(
 		balanceRepo:   balanceRepo,
 		portfolioRepo: portfolioRepo,
 		txnRepo:       txnRepo,
+		postRepo:      postRepo,
 	}
 }
 
@@ -65,17 +68,32 @@ func (m *MarketMaker) tick() {
 		return
 	}
 
+	// Batch-load all sentiments so we don't query per stock
+	sentiments, err := m.postRepo.GetAllSentiments()
+	if err != nil {
+		sentiments = make(map[int]int)
+	}
+
 	for _, u := range users {
 		// Skip the MARKET system user itself
 		if u.ID == m.marketUserID {
 			continue
 		}
 
-		// Apply a direct random percentage change: ±0.05% to ±0.5%
-		changePct := (0.0005 + rand.Float64()*0.005) // 0.05% to 0.55%
+		// Apply a direct random percentage change: ±0.1% to ±1.0%
+		changePct := (0.001 + rand.Float64()*0.01) // 0.1% to 1.1%
 
-		// Random direction — 65% chance to buy, 35% to sell (bullish bias)
-		isBuy := rand.Float64() < 0.65
+		// Base buy probability: 65% buy, 35% sell (bullish bias)
+		buyProb := 0.65
+
+		// Adjust buy probability based on news sentiment
+		// Each net like point shifts buy probability by 2%, capped at [0.20, 0.90]
+		if net, ok := sentiments[u.ID]; ok && net != 0 {
+			buyProb += float64(net) * 0.02
+			buyProb = math.Max(0.20, math.Min(0.90, buyProb))
+		}
+
+		isBuy := rand.Float64() < buyProb
 		if !isBuy {
 			changePct = -changePct
 		}

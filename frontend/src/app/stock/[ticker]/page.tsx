@@ -7,6 +7,7 @@ import AppLayout from "@/components/layout/AppLayout";
 import PriceChart from "@/components/charts/PriceChart";
 import TradePanel from "@/components/trading/TradePanel";
 import TransactionHistory from "@/components/trading/TransactionHistory";
+import NewsSection from "@/components/news/NewsSection";
 import Card from "@/components/ui/Card";
 import { useAuth } from "@/contexts/AuthContext";
 import { StockDetail, PriceHistory, PortfolioHolding } from "@/types";
@@ -211,6 +212,9 @@ export default function StockDetailPage() {
               <h3 className="text-white font-semibold mb-3">Recent Trades</h3>
               <TransactionHistory transactions={stock.recent_trades} />
             </Card>
+
+            {/* News Section */}
+            <NewsSection ticker={ticker} />
           </div>
 
           {/* Right Column: Holdings + Trade Panel */}

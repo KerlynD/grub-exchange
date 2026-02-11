@@ -26,14 +26,16 @@ func main() {
 	notifRepo := repository.NewNotificationRepo(db)
 	achieveRepo := repository.NewAchievementRepo(db)
 
+	postRepo := repository.NewPostRepo(db)
+	snapshotRepo := repository.NewMarketSnapshotRepo(db)
+
 	// Initialize services
 	authService := services.NewAuthService(db, userRepo, balanceRepo, txnRepo)
 	achieveSvc := services.NewAchievementService(achieveRepo, balanceRepo, portfolioRepo, userRepo)
 	tradingService := services.NewTradingService(db, userRepo, balanceRepo, portfolioRepo, txnRepo, notifRepo, achieveSvc)
 	portfolioService := services.NewPortfolioService(userRepo, balanceRepo, portfolioRepo, txnRepo)
-	snapshotRepo := repository.NewMarketSnapshotRepo(db)
 	marketService := services.NewMarketService(userRepo, balanceRepo, portfolioRepo, txnRepo, snapshotRepo)
-	marketMaker := services.NewMarketMaker(db, userRepo, balanceRepo, portfolioRepo, txnRepo)
+	marketMaker := services.NewMarketMaker(db, userRepo, balanceRepo, portfolioRepo, txnRepo, postRepo)
 
 	// Initialize handlers
 	authHandler := handlers.NewAuthHandler(authService)
@@ -43,13 +45,17 @@ func main() {
 	profileHandler := handlers.NewProfileHandler(authService, userRepo)
 	notifHandler := handlers.NewNotificationHandler(notifRepo)
 	achieveHandler := handlers.NewAchievementHandler(achieveSvc)
+	postHandler := handlers.NewPostHandler(postRepo, userRepo)
+
+	// Backfill market snapshots from historical data on first run
+	snapshotRepo.BackfillFromHistory()
 
 	// Start background jobs
 	go runScheduledJobs(marketService, achieveSvc, userRepo)
 	go marketMaker.Run(60 * time.Second) // nudge prices every 60 seconds
 
 	// Setup router
-	router := api.SetupRouter(authHandler, tradingHandler, portfolioHandler, marketHandler, profileHandler, notifHandler, achieveHandler)
+	router := api.SetupRouter(authHandler, tradingHandler, portfolioHandler, marketHandler, profileHandler, notifHandler, achieveHandler, postHandler)
 
 	port := os.Getenv("PORT")
 	if port == "" {
