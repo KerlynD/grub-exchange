@@ -49,10 +49,10 @@ func (r *BalanceRepo) UpdateBalanceNoTx(userID int, amount float64) error {
 	return err
 }
 
-func (r *BalanceRepo) ClaimDailyBonus(userID int) error {
+func (r *BalanceRepo) ClaimDailyBonus(userID int, amount float64) error {
 	_, err := r.db.Exec(
-		`UPDATE balances SET grub_balance = grub_balance + 10, last_daily_claim = $1 WHERE user_id = $2`,
-		time.Now(), userID,
+		`UPDATE balances SET grub_balance = grub_balance + $1, last_daily_claim = $2 WHERE user_id = $3`,
+		amount, time.Now(), userID,
 	)
 	return err
 }

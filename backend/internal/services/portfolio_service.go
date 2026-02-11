@@ -106,11 +106,22 @@ func (s *PortfolioService) ClaimDailyBonus(userID int) (float64, error) {
 		}
 	}
 
-	if err := s.balanceRepo.ClaimDailyBonus(userID); err != nil {
+	// Get user's stock price for the bonus calculation
+	user, err := s.userRepo.GetByID(userID)
+	if err != nil {
 		return 0, err
 	}
 
-	return balance.GrubBalance + 10, nil
+	// Daily bonus: 20 Grub base + 5% of current stock price
+	baseBonus := 20.0
+	stockBonus := user.CurrentSharePrice * 0.05
+	totalBonus := baseBonus + stockBonus
+
+	if err := s.balanceRepo.ClaimDailyBonus(userID, totalBonus); err != nil {
+		return 0, err
+	}
+
+	return balance.GrubBalance + totalBonus, nil
 }
 
 func (s *PortfolioService) GetTransactionHistory(userID int) ([]models.TransactionWithDetails, error) {
