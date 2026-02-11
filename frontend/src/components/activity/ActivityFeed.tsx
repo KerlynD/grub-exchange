@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Notification } from "@/types";
 import * as api from "@/lib/api";
+import { ChevronDown, ChevronUp } from "lucide-react";
 
 function timeAgo(dateStr: string): string {
   const now = new Date();
@@ -16,10 +17,13 @@ function timeAgo(dateStr: string): string {
   return `${Math.floor(seconds / 86400)}d ago`;
 }
 
+const COLLAPSED_COUNT = 5;
+
 export default function ActivityFeed() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [expanded, setExpanded] = useState(false);
 
   const fetchNotifications = useCallback(async () => {
     try {
@@ -69,6 +73,11 @@ export default function ActivityFeed() {
     );
   }
 
+  const displayedNotifications = expanded
+    ? notifications
+    : notifications.slice(0, COLLAPSED_COUNT);
+  const hasMore = notifications.length > COLLAPSED_COUNT;
+
   return (
     <div className="space-y-2">
       {unreadCount > 0 && (
@@ -85,7 +94,7 @@ export default function ActivityFeed() {
         </div>
       )}
       <AnimatePresence>
-        {notifications.map((notif, i) => (
+        {displayedNotifications.map((notif, i) => (
           <motion.div
             key={notif.id}
             initial={{ opacity: 0, x: 20 }}
@@ -124,6 +133,24 @@ export default function ActivityFeed() {
           </motion.div>
         ))}
       </AnimatePresence>
+
+      {hasMore && (
+        <button
+          onClick={() => setExpanded(!expanded)}
+          className="w-full py-2 text-xs font-medium text-text-secondary hover:text-white
+            flex items-center justify-center gap-1 transition-colors"
+        >
+          {expanded ? (
+            <>
+              Show less <ChevronUp size={14} />
+            </>
+          ) : (
+            <>
+              Show {notifications.length - COLLAPSED_COUNT} more <ChevronDown size={14} />
+            </>
+          )}
+        </button>
+      )}
     </div>
   );
 }
