@@ -233,7 +233,19 @@ func (s *TradingService) ExecuteSell(sellerID int, stockTicker string, numShares
 	}
 
 	if holding.NumShares < finalShares {
-		return nil, errors.New("insufficient shares to sell")
+		// If the user is trying to sell within 1% of their total, treat it as "sell all"
+		if finalShares <= holding.NumShares*1.01 {
+			finalShares = holding.NumShares
+			// Recalculate with exact shares
+			newPrice, execPrice = CalculateTradeExecution(stockUser.CurrentSharePrice, -finalShares, float64(stockUser.SharesOutstanding))
+		} else {
+			return nil, errors.New("insufficient shares to sell")
+		}
+	}
+
+	// If selling very close to all shares (within 0.1%), just sell everything to avoid dust
+	if finalShares >= holding.NumShares*0.999 {
+		finalShares = holding.NumShares
 	}
 
 	// Proceeds based on execution price (includes downward slippage)

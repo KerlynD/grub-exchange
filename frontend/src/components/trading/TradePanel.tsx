@@ -138,8 +138,8 @@ export default function TradePanel({
         </div>
       </div>
 
-      {/* Quick amount buttons for grub mode */}
-      {inputMode === "grub" && tab === "buy" && (
+      {/* Quick amount buttons */}
+      {tab === "buy" && inputMode === "grub" && (
         <div className="flex gap-2 mb-4">
           {[5, 10, 25, 50].map((amt) => (
             <button
@@ -151,6 +151,35 @@ export default function TradePanel({
               {amt}G
             </button>
           ))}
+        </div>
+      )}
+      {tab === "sell" && userShares > 0 && (
+        <div className="flex gap-2 mb-4">
+          {[25, 50, 75, 100].map((pct) => {
+            const shareAmt = userShares * (pct / 100);
+            const label = pct === 100 ? "MAX" : `${pct}%`;
+            return (
+              <button
+                key={pct}
+                onClick={() => {
+                  if (inputMode === "shares") {
+                    setInputValue(pct === 100 ? String(userShares) : shareAmt.toFixed(4));
+                  } else {
+                    const grubAmt = shareAmt * currentPrice;
+                    setInputValue(pct === 100 ? grubAmt.toFixed(2) : grubAmt.toFixed(2));
+                  }
+                }}
+                className={`flex-1 py-1.5 text-xs font-medium bg-dark-bg border rounded-lg
+                  transition-colors ${
+                    pct === 100
+                      ? "border-grub-red/50 text-grub-red hover:bg-grub-red/10"
+                      : "border-border-dark text-text-secondary hover:text-white hover:border-grub-red/50"
+                  }`}
+              >
+                {label}
+              </button>
+            );
+          })}
         </div>
       )}
 
