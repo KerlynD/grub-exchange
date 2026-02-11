@@ -263,7 +263,9 @@ func (s *TradingService) ExecuteSell(sellerID int, stockTicker string, numShares
 	}
 
 	remainingShares := holding.NumShares - finalShares
-	if remainingShares <= 0.0001 {
+	// Delete holding if remaining shares are worth less than 0.10 Grub (dust threshold)
+	dustValue := remainingShares * stockUser.CurrentSharePrice
+	if remainingShares <= 0.01 || dustValue < 0.10 {
 		if err := s.portfolioRepo.DeleteHolding(tx, sellerID, stockUser.ID); err != nil {
 			return nil, err
 		}
