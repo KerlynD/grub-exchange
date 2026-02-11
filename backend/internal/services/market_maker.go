@@ -74,6 +74,12 @@ func (m *MarketMaker) tick() {
 		sentiments = make(map[int]int)
 	}
 
+	// Batch-load recent trading momentum (last 30 minutes)
+	momentum, err := m.txnRepo.GetRecentMomentum(30)
+	if err != nil {
+		momentum = make(map[int]float64)
+	}
+
 	for _, u := range users {
 		// Skip the MARKET system user itself
 		if u.ID == m.marketUserID {
@@ -90,8 +96,17 @@ func (m *MarketMaker) tick() {
 		// Each net like point shifts buy probability by 2%, capped at [0.20, 0.90]
 		if net, ok := sentiments[u.ID]; ok && net != 0 {
 			buyProb += float64(net) * 0.02
-			buyProb = math.Max(0.20, math.Min(0.90, buyProb))
 		}
+
+		// Adjust buy probability based on recent trading momentum
+		// Net buying (positive) increases buy prob, net selling (negative) decreases it
+		// Each 10 Grub of net momentum shifts buy probability by 1%
+		if netMomentum, ok := momentum[u.ID]; ok && netMomentum != 0 {
+			buyProb += netMomentum * 0.001 // 0.1% per 1 Grub of momentum
+		}
+
+		// Clamp to [0.15, 0.90] after all adjustments
+		buyProb = math.Max(0.15, math.Min(0.90, buyProb))
 
 		isBuy := rand.Float64() < buyProb
 		if !isBuy {

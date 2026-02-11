@@ -187,6 +187,36 @@ func (r *TransactionRepo) GetPriceAt(userID int, at time.Time) (float64, error) 
 	return price, err
 }
 
+// GetRecentMomentum returns the net momentum (buy volume - sell volume) for each stock
+// over the last N minutes. Positive = more buying, negative = more selling.
+func (r *TransactionRepo) GetRecentMomentum(minutes int) (map[int]float64, error) {
+	since := time.Now().Add(-time.Duration(minutes) * time.Minute)
+	rows, err := r.db.Query(
+		`SELECT stock_user_id,
+		        SUM(CASE WHEN transaction_type = 'BUY' THEN total_grub ELSE 0 END) -
+		        SUM(CASE WHEN transaction_type = 'SELL' THEN total_grub ELSE 0 END) AS net_momentum
+		 FROM transactions
+		 WHERE timestamp > $1
+		 GROUP BY stock_user_id`,
+		since,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	momentum := make(map[int]float64)
+	for rows.Next() {
+		var stockID int
+		var net float64
+		if err := rows.Scan(&stockID, &net); err != nil {
+			return nil, err
+		}
+		momentum[stockID] = net
+	}
+	return momentum, nil
+}
+
 // GetPricesAtBatch returns the price for each user_id at a given time in a single query.
 // Uses DISTINCT ON to get the latest price before or at the timestamp per user.
 func (r *TransactionRepo) GetPricesAtBatch(at time.Time) (map[int]float64, error) {
