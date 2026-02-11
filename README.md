@@ -19,12 +19,13 @@ A Robinhood-style social trading platform where users can buy and sell shares of
 - **Activity feed** — Real-time notifications when someone trades your stock
 - **News & sentiment** — Post and vote on stock news; sentiment drives AI market maker behavior
 - **Market maker** — Background bot that trades every 60 seconds with a bullish bias, keeping the market alive
-- **Daily claim** — 10 free GRUB every 24 hours
+- **Daily claim** — 20 free GRUB every 24 hours plus 5% of your current price
 - **Daily dividends** — 1% of your portfolio value paid out daily
 
 ## Screenshots
 
-<!-- Add screenshots here -->
+<img width="1127" height="441" alt="image" src="https://github.com/user-attachments/assets/b0c6e07a-5097-406a-87a0-d43cb417729a" />
+<img width="757" height="474" alt="image" src="https://github.com/user-attachments/assets/a40c8def-8ced-4d10-af53-577262119b1a" />
 
 ## Tech Stack
 
