@@ -21,10 +21,11 @@ type PortfolioHolding struct {
 }
 
 type PortfolioResponse struct {
-	GrubBalance     float64            `json:"grub_balance"`
-	TotalValue      float64            `json:"total_value"`
-	TotalPL         float64            `json:"total_pl"`
-	TotalPLPercent  float64            `json:"total_pl_percent"`
-	Holdings        []PortfolioHolding `json:"holdings"`
-	CanClaimDaily   bool               `json:"can_claim_daily"`
+	GrubBalance    float64            `json:"grub_balance"`
+	TotalValue     float64            `json:"total_value"`
+	TotalPL        float64            `json:"total_pl"`
+	TotalPLPercent float64            `json:"total_pl_percent"`
+	Holdings       []PortfolioHolding `json:"holdings"`
+	CanClaimDaily  bool               `json:"can_claim_daily"`
+	LastDailyClaim *string            `json:"last_daily_claim,omitempty"`
 }

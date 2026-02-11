@@ -1,6 +1,7 @@
 package services
 
 import (
+	"fmt"
 	"grub-exchange/internal/models"
 	"grub-exchange/internal/repository"
 	"log"
@@ -14,6 +15,7 @@ type MarketService struct {
 	portfolioRepo *repository.PortfolioRepo
 	txnRepo       *repository.TransactionRepo
 	snapshotRepo  *repository.MarketSnapshotRepo
+	notifRepo     *repository.NotificationRepo
 }
 
 func NewMarketService(
@@ -22,6 +24,7 @@ func NewMarketService(
 	portfolioRepo *repository.PortfolioRepo,
 	txnRepo *repository.TransactionRepo,
 	snapshotRepo *repository.MarketSnapshotRepo,
+	notifRepo *repository.NotificationRepo,
 ) *MarketService {
 	return &MarketService{
 		userRepo:      userRepo,
@@ -29,6 +32,7 @@ func NewMarketService(
 		portfolioRepo: portfolioRepo,
 		txnRepo:       txnRepo,
 		snapshotRepo:  snapshotRepo,
+		notifRepo:     notifRepo,
 	}
 }
 
@@ -427,9 +431,15 @@ func (s *MarketService) RunDailyDividends() {
 		}
 
 		dividend := totalValue * 0.01
-		if dividend > 0 {
+		if dividend > 0.01 { // Only pay if dividend is meaningful (> 1 cent)
 			if err := s.balanceRepo.UpdateBalanceNoTx(u.ID, dividend); err != nil {
 				log.Printf("Error paying dividend to user %d: %v", u.ID, err)
+				continue
+			}
+			// Send notification about dividend payment
+			if s.notifRepo != nil {
+				msg := fmt.Sprintf("You received %.2f Grub in dividends from your holdings!", dividend)
+				_ = s.notifRepo.Create(u.ID, "dividend", msg, "", "", 0)
 			}
 		}
 	}

@@ -58,6 +58,7 @@ export interface PortfolioResponse {
   total_pl_percent: number;
   holdings: PortfolioHolding[] | null;
   can_claim_daily: boolean;
+  last_daily_claim?: string;
 }
 
 export interface TransactionWithDetails {

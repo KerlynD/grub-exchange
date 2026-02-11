@@ -57,6 +57,7 @@ export default function DashboardPage() {
           {portfolio && (
             <DailyClaimButton
               canClaim={portfolio.can_claim_daily}
+              lastDailyClaim={portfolio.last_daily_claim}
               onClaimed={handleClaimed}
             />
           )}

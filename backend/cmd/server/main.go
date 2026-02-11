@@ -34,7 +34,7 @@ func main() {
 	achieveSvc := services.NewAchievementService(achieveRepo, balanceRepo, portfolioRepo, userRepo)
 	tradingService := services.NewTradingService(db, userRepo, balanceRepo, portfolioRepo, txnRepo, notifRepo, achieveSvc)
 	portfolioService := services.NewPortfolioService(userRepo, balanceRepo, portfolioRepo, txnRepo)
-	marketService := services.NewMarketService(userRepo, balanceRepo, portfolioRepo, txnRepo, snapshotRepo)
+	marketService := services.NewMarketService(userRepo, balanceRepo, portfolioRepo, txnRepo, snapshotRepo, notifRepo)
 	marketMaker := services.NewMarketMaker(db, userRepo, balanceRepo, portfolioRepo, txnRepo, postRepo)
 
 	// Initialize handlers

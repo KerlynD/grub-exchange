@@ -80,8 +80,11 @@ func (s *PortfolioService) GetUserPortfolio(userID int) (*models.PortfolioRespon
 	}
 
 	canClaim := true
+	var lastClaimStr *string
 	if balance.LastDailyClaim != nil {
 		canClaim = time.Since(*balance.LastDailyClaim) >= 24*time.Hour
+		formatted := balance.LastDailyClaim.Format(time.RFC3339)
+		lastClaimStr = &formatted
 	}
 
 	return &models.PortfolioResponse{
@@ -91,6 +94,7 @@ func (s *PortfolioService) GetUserPortfolio(userID int) (*models.PortfolioRespon
 		TotalPLPercent: totalPLPercent,
 		Holdings:       portfolioHoldings,
 		CanClaimDaily:  canClaim,
+		LastDailyClaim: lastClaimStr,
 	}, nil
 }
 
