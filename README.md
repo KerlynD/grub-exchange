@@ -1,63 +1,34 @@
 # Grub Exchange
 
-A Robinhood-style social trading app where users can buy and sell shares of their friends using "Grub" currency.
+A Robinhood-style social trading platform where users can buy and sell shares of their friends using **Grub** currency. When you sign up, you become a tradeable stock — and so does everyone else.
 
-## Tech Stack
+## How It Works
 
-- **Frontend**: Next.js 14, TypeScript, Tailwind CSS, Framer Motion, Recharts
-- **Backend**: Go (Gin framework)
-- **Database**: SQLite (with WAL mode)
-- **Auth**: JWT with httpOnly cookies
-
-## Getting Started
-
-### Prerequisites
-
-- Node.js 18+
-- Go 1.21+
-- GCC (required for SQLite via CGo — install [TDM-GCC](https://jmeubank.github.io/tdm-gcc/) on Windows)
-
-### Backend
-
-```bash
-cd backend
-go mod tidy
-go run ./cmd/server/
-```
-
-The API server starts on `http://localhost:8080`.
-
-### Frontend
-
-```bash
-cd frontend
-npm install
-npm run dev
-```
-
-The frontend starts on `http://localhost:3000`.
-
-### Environment Variables
-
-**Backend** (optional):
-- `PORT` — Server port (default: `8080`)
-- `DB_PATH` — SQLite database path (default: `grub_exchange.db`)
-- `JWT_SECRET` — JWT signing secret (default: dev secret)
-- `FRONTEND_URL` — Frontend origin for CORS (default: `http://localhost:3000`)
-- `ENV` — Set to `production` for secure cookies
-
-**Frontend** (optional):
-- `NEXT_PUBLIC_API_URL` — Backend API URL (default: `http://localhost:8080`)
+- **Sign up and become a stock.** Your first name becomes your ticker symbol, and your share price starts at 10 GRUB.
+- **Trade your friends.** Buy and sell shares of other users. Prices move based on supply and demand — more buyers push the price up, more sellers push it down.
+- **Earn Grub.** Collect a daily login bonus, earn 2% appreciation when someone buys your stock, and receive daily dividends on your portfolio value.
+- **Post news and influence the market.** Write bullish or bearish takes on any stock. Community sentiment (likes/dislikes) influences the market maker's trading behavior.
 
 ## Features
 
-- User registration creates both a trading account AND a tradeable stock
-- Users start with 100 Grub currency
-- Daily login bonus: 10 Grub (claimable once per 24h)
-- Buy/sell shares with market-forces pricing
-- 2% appreciation earning when someone buys your shares
-- 0.5% daily price decay for inactive stocks
-- 1% daily dividends on portfolio value
-- Price charts with multiple time ranges
-- Leaderboard with 5 ranking categories
-- Robinhood-inspired dark mode UI
+- **Market-forces pricing** — AMM-style execution with slippage protection to prevent arbitrage
+- **Live price charts** — Real-time candlestick-style area charts with 1D, 1W, 1M, and ALL time ranges
+- **Portfolio tracking** — P&L per holding, total portfolio value over time, and a historical portfolio graph
+- **Leaderboard** — Rankings for most valuable stocks, biggest gainers/losers, richest traders, and best portfolio performance
+- **Achievements** — Unlock badges like First Trade, Diamond Hands, Day Trader, and Whale
+- **Activity feed** — Real-time notifications when someone trades your stock
+- **News & sentiment** — Post and vote on stock news; sentiment drives AI market maker behavior
+- **Market maker** — Background bot that trades every 60 seconds with a bullish bias, keeping the market alive
+- **Daily claim** — 10 free GRUB every 24 hours
+- **Daily dividends** — 1% of your portfolio value paid out daily
+
+## Screenshots
+
+<!-- Add screenshots here -->
+
+## Tech Stack
+
+- **Frontend:** Next.js, TypeScript, Tailwind CSS, Framer Motion, Recharts
+- **Backend:** Go (Gin framework)
+- **Database:** PostgreSQL (Supabase)
+- **Auth:** JWT with httpOnly cookies
