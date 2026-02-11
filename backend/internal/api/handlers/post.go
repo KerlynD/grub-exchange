@@ -122,3 +122,23 @@ func (h *PostHandler) VotePost(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"message": "Vote recorded"})
 }
+
+func (h *PostHandler) GetRecentPosts(c *gin.Context) {
+	userID, ok := getUserID(c)
+	if !ok {
+		return
+	}
+
+	postsResult, err := h.postRepo.GetRecent(userID, 20)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get posts"})
+		return
+	}
+
+	posts := postsResult
+	if posts == nil {
+		posts = []models.StockPost{}
+	}
+
+	c.JSON(http.StatusOK, gin.H{"posts": posts})
+}

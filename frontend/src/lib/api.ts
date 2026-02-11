@@ -201,6 +201,10 @@ export async function getAchievements(): Promise<{
 }
 
 // News / Posts
+export async function getRecentPosts(): Promise<{ posts: StockPost[] }> {
+  return fetchAPI("/api/posts/recent");
+}
+
 export async function getStockPosts(
   ticker: string
 ): Promise<{ posts: StockPost[] }> {

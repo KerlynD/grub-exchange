@@ -126,6 +126,36 @@ func (r *PostRepo) Vote(postID, userID, voteType int) error {
 	return tx.Commit()
 }
 
+// GetRecent returns the most recent posts across all stocks.
+func (r *PostRepo) GetRecent(requestingUserID, limit int) ([]models.StockPost, error) {
+	rows, err := r.db.Query(
+		`SELECT p.id, p.author_id, u.username, su.ticker, p.content, p.likes, p.dislikes, p.created_at,
+		        COALESCE(v.vote_type, 0)
+		 FROM stock_posts p
+		 JOIN users u ON p.author_id = u.id
+		 JOIN users su ON p.stock_user_id = su.id
+		 LEFT JOIN post_votes v ON v.post_id = p.id AND v.user_id = $2
+		 ORDER BY p.created_at DESC
+		 LIMIT $1`,
+		limit, requestingUserID,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var posts []models.StockPost
+	for rows.Next() {
+		var p models.StockPost
+		if err := rows.Scan(&p.ID, &p.AuthorID, &p.AuthorUsername, &p.StockTicker,
+			&p.Content, &p.Likes, &p.Dislikes, &p.CreatedAt, &p.UserVote); err != nil {
+			return nil, err
+		}
+		posts = append(posts, p)
+	}
+	return posts, nil
+}
+
 // GetSentimentForStock returns the net sentiment (likes - dislikes) from the top 10
 // most-engaged posts for a stock. Used by the market maker.
 func (r *PostRepo) GetSentimentForStock(stockUserID int) (int, error) {

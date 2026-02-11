@@ -8,6 +8,7 @@ import PortfolioCard from "@/components/portfolio/PortfolioCard";
 import StockCard from "@/components/market/StockCard";
 import PortfolioChart from "@/components/charts/PortfolioChart";
 import ActivityFeed from "@/components/activity/ActivityFeed";
+import RecentNews from "@/components/news/RecentNews";
 import BadgeGrid from "@/components/achievements/BadgeGrid";
 import Card from "@/components/ui/Card";
 import { useAuth } from "@/contexts/AuthContext";
@@ -154,6 +155,15 @@ export default function DashboardPage() {
                 Activity
               </h3>
               <ActivityFeed />
+            </Card>
+
+            {/* Recent News */}
+            <Card>
+              <h3 className="text-white font-semibold mb-3 flex items-center gap-2">
+                <span className="text-grub-green">📰</span>
+                Recent News
+              </h3>
+              <RecentNews />
             </Card>
 
             {/* Achievements */}

@@ -66,6 +66,7 @@ func SetupRouter(
 			protected.GET("/achievements", achieveHandler.GetMyAchievements)
 
 			// News / Posts
+			protected.GET("/posts/recent", postHandler.GetRecentPosts)
 			protected.GET("/stocks/:ticker/posts", postHandler.GetPosts)
 			protected.POST("/stocks/:ticker/posts", postHandler.CreatePost)
 			protected.POST("/posts/:id/vote", postHandler.VotePost)
